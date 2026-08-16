@@ -1429,16 +1429,13 @@ class TelnetCollector:
                 sc(f'service-port 1 vport 1 user-vlan {vlan} vlan {vlan}')
                 self._send_command(tn, 'exit')  # exit ONU interface
                 self._send_command(tn, f'pon-onu-mng {onu_if}')
-                sc(f'service INTERNET gemport 1 vlan {vlan}')
-                sc(f'vlan port eth_0/1 mode hybrid def-vlan {vlan}')
-                sc(f'vlan port eth_0/2 mode hybrid def-vlan {vlan}')
-                sc(f'vlan port eth_0/3 mode hybrid def-vlan {vlan}')
-                sc(f'vlan port eth_0/4 mode hybrid def-vlan {vlan}')
+                sc(f'service {service_name} gemport 1 iphost 1 vlan {vlan}')
                 pppoe_user = extra.get('pppoe_user', '')
                 pppoe_pass = extra.get('pppoe_pass', '')
-                sc('wan 1 service internet host 1')
+                vlan_profile = extra.get('vlan_profile') or f'PPPoE-{vlan}'
                 if pppoe_user:
-                    sc(f'pppoe 1 nat enable user {pppoe_user} password {pppoe_pass}')
+                    sc(f'wan-ip 1 mode pppoe username {pppoe_user} password {pppoe_pass} vlan-profile {vlan_profile} host 1')
+                sc('security-mgmt 1 state enable mode forward')
 
             elif template == 'fiberhome_veip':
                 tr069_vlan = extra.get('tr069_vlan', 1010)
