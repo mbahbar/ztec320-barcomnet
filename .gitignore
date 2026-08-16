@@ -1,0 +1,74 @@
+# Logs
+*.log
+backend.log
+backend-err.log
+frontend.log
+frontend-err.log
+
+# Debug screenshots
+*.png
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+node_modules/
+
+# IDE
+.devin/
+.vscode/
+.idea/
+*.swp
+*.swo
+windsurf/
+
+# Database
+instance/
+*.db
+*.sqlite3
+*.db-journal
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Docker
+.docker/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test/coverage
+.coverage
+htmlcov/
+.pytest_cache/
+frontend/coverage/
+
+# Build artifacts
+*.zip
+*.tar.gz
+
+# Cloudflare (removed SaaS)
+deploy/cloudflared*
+
+# AGENTS.md (AI assistant context, not for repo)
+AGENTS.md
+
+# Backup/reference folders
+speed/
