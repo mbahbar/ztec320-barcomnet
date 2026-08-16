@@ -3308,7 +3308,28 @@ def provision_unified():
     port = data.get('port', 1)
     onu_id = data.get('onu_id', 1)
     serial = data.get('serial', '')
-    onu_type = data.get('onu_type', 'All')
+    onu_type = (data.get('onu_type') or '').strip()
+    reg_types = [t.type_name for t in ONUType.query.filter_by(olt_id=olt_id).all() if t.type_name]
+    if not onu_type or onu_type.upper() in ('ALL', 'DEFAULT') or (reg_types and onu_type not in reg_types):
+        sn_up = (serial or '').upper()
+        if sn_up.startswith('ZTEG') or sn_up.startswith('ZICG'):
+            for preferred in ['ZXHN-F670L', 'ZXHN-F660', 'ZXHN-F609', 'ZXHN-F680', 'ZTE-F601']:
+                if preferred in reg_types:
+                    onu_type = preferred
+                    break
+        elif sn_up.startswith('HWTC'):
+            if 'HUAWEI' in reg_types: onu_type = 'HUAWEI'
+            elif 'E-HUAWEI' in reg_types: onu_type = 'E-HUAWEI'
+        elif sn_up.startswith('FHTT'):
+            if 'FIBERHOME' in reg_types: onu_type = 'FIBERHOME'
+        elif sn_up.startswith('ALCL'):
+            if 'HUAWEI' in reg_types: onu_type = 'HUAWEI'
+            elif 'ZXHN-F660' in reg_types: onu_type = 'ZXHN-F660'
+
+        if not onu_type or (reg_types and onu_type not in reg_types):
+            if 'All' in reg_types: onu_type = 'All'
+            elif reg_types: onu_type = reg_types[0]
+            else: onu_type = 'ZXHN-F660'
     tcont_profile = (data.get('tcont_profile') or '').strip()
     valid_tconts = [p.name for p in SpeedProfile.query.filter_by(olt_id=olt_id, profile_type='tcont').all()]
     if not tcont_profile or (valid_tconts and tcont_profile not in valid_tconts):
@@ -3403,8 +3424,29 @@ def pre_register_onu():
     slot = data.get('slot', 1)
     port = data.get('port', 1)
     onu_id = data.get('onu_id', 1)
-    onu_type = data.get('onu_type', 'All')  # Default 'All' per oltc320 reference (universal type)
+    onu_type = (data.get('onu_type') or '').strip()
     serial = data.get('serial', '')
+    reg_types = [t.type_name for t in ONUType.query.filter_by(olt_id=olt_id).all() if t.type_name]
+    if not onu_type or onu_type.upper() in ('ALL', 'DEFAULT') or (reg_types and onu_type not in reg_types):
+        sn_up = (serial or '').upper()
+        if sn_up.startswith('ZTEG') or sn_up.startswith('ZICG'):
+            for preferred in ['ZXHN-F670L', 'ZXHN-F660', 'ZXHN-F609', 'ZXHN-F680', 'ZTE-F601']:
+                if preferred in reg_types:
+                    onu_type = preferred
+                    break
+        elif sn_up.startswith('HWTC'):
+            if 'HUAWEI' in reg_types: onu_type = 'HUAWEI'
+            elif 'E-HUAWEI' in reg_types: onu_type = 'E-HUAWEI'
+        elif sn_up.startswith('FHTT'):
+            if 'FIBERHOME' in reg_types: onu_type = 'FIBERHOME'
+        elif sn_up.startswith('ALCL'):
+            if 'HUAWEI' in reg_types: onu_type = 'HUAWEI'
+            elif 'ZXHN-F660' in reg_types: onu_type = 'ZXHN-F660'
+
+        if not onu_type or (reg_types and onu_type not in reg_types):
+            if 'All' in reg_types: onu_type = 'All'
+            elif reg_types: onu_type = reg_types[0]
+            else: onu_type = 'ZXHN-F660'
     vlan = data.get('vlan', 100)
     tcont_profile = (data.get('tcont_profile') or '').strip()
     valid_tconts = [p.name for p in SpeedProfile.query.filter_by(olt_id=olt_id, profile_type='tcont').all()]
@@ -3509,34 +3551,54 @@ def scan_unconfigured():
     except Exception:
         reg_types = [t.type_name for t in ONUType.query.filter_by(olt_id=olt_id).all() if t.type_name]
 
-    def match_onu_type(model):
-        """Match scanned model to a registered ONU type.
-        F670LV9.0 → F670L, HG8245H5 → HG8245H5 or HG8145V5, etc."""
-        if not model or not reg_types:
+    def match_onu_type(model, sn=''):
+        """Match scanned model/SN to a registered ONU type.
+        F672YV9.1 → ZXHN-F670L / ZXHN-F660, HG8145V5 → HUAWEI, etc."""
+        if not reg_types:
             return ''
-        ml = model.upper()
+        ml = (model or '').upper()
+        sn_up = (sn or '').upper()
         # Exact match first
         for rt in reg_types:
             if rt.upper() == ml:
                 return rt
-        # Prefix match: F670LV9.0 → F670L (registered type is prefix of model)
+        # Prefix match
         for rt in reg_types:
-            if ml.startswith(rt.upper()):
+            if ml and ml.startswith(rt.upper()):
                 return rt
-        # Suffix/partial: model contains registered type
+        # Suffix/partial
         for rt in reg_types:
-            if rt.upper() in ml:
+            if ml and rt.upper() in ml:
                 return rt
-        # Strip version suffix: F670LV9.0 → F670LV9 → F670LV → F670L
-        base = re.split(r'[V.]\d', ml)[0]
+        # Strip version suffix
+        base = re.split(r'[V.]\d', ml)[0] if ml else ''
         if base and base != ml:
             for rt in reg_types:
                 if rt.upper() == base or base.startswith(rt.upper()):
                     return rt
-        # Fallback to 'All' (universal)
-        if 'ALL' in [rt.upper() for rt in reg_types]:
+        # ZTE model heuristics (F670, F672 -> ZXHN-F670L or ZXHN-F680)
+        if 'F67' in ml or sn_up.startswith('ZTEG'):
+            for preferred in ['ZXHN-F670L', 'ZXHN-F660', 'ZXHN-F609', 'ZXHN-F680', 'ZTE-F601']:
+                if preferred in reg_types: return preferred
+        if 'F66' in ml:
+            for preferred in ['ZXHN-F660', 'ZXHN-F609', 'ZTE-F601']:
+                if preferred in reg_types: return preferred
+        if 'F60' in ml:
+            for preferred in ['ZXHN-F609', 'ZTE-F601', 'ZXHN-F660']:
+                if preferred in reg_types: return preferred
+        if 'HG' in ml or 'HWTC' in sn_up:
+            if 'HUAWEI' in reg_types: return 'HUAWEI'
+            if 'E-HUAWEI' in reg_types: return 'E-HUAWEI'
+        if 'FHTT' in sn_up:
+            if 'FIBERHOME' in reg_types: return 'FIBERHOME'
+        if 'ALCL' in sn_up or 'G-' in ml:
+            if 'HUAWEI' in reg_types: return 'HUAWEI'
+            if 'ZXHN-F660' in reg_types: return 'ZXHN-F660'
+
+        # Fallback to 'All' if registered, otherwise first registered type
+        if 'All' in reg_types:
             return 'All'
-        return ''
+        return reg_types[0] if reg_types else ''
 
     # Enrich with next available onu_id per port (oltc320 reference: get_next_available_onu_id)
     port_onu_ids = {}  # cache per port
@@ -3560,7 +3622,7 @@ def scan_unconfigured():
 
         # Match model to registered ONU type
         model = onu.get('model', '')
-        onu['matched_type'] = match_onu_type(model)
+        onu['matched_type'] = match_onu_type(model, onu.get('sn', ''))
 
     return jsonify({'success': True, 'onus': unconfigured, 'registered_types': reg_types})
 

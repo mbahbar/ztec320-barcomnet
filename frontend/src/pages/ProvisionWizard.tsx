@@ -356,7 +356,15 @@ export function ProvisionWizard({ manualMode = false }: { manualMode?: boolean }
   useEffect(() => {
     if (!data.oltId) return;
     fetch(`/api/olt/${data.oltId}/onu-types`, { credentials: 'include' })
-      .then(r => r.json()).then(d => { if (d.success && d.types) setOnuTypes(d.types); }).catch(() => {});
+      .then(r => r.json()).then(d => {
+        if (d.success && d.types && d.types.length > 0) {
+          setOnuTypes(d.types);
+          setData(prev => ({
+            ...prev,
+            onuType: d.types.includes(prev.onuType) ? prev.onuType : d.types.includes('ZXHN-F670L') ? 'ZXHN-F670L' : d.types.includes('ZXHN-F660') ? 'ZXHN-F660' : d.types[0]
+          }));
+        }
+      }).catch(() => {});
     fetch(`/api/olt/${data.oltId}/speed-profiles`, { credentials: 'include' })
       .then(r => r.json()).then(d => {
         if (d.success && d.tcont) setTcontProfiles(d.tcont);
@@ -415,12 +423,24 @@ export function ProvisionWizard({ manualMode = false }: { manualMode?: boolean }
   };
 
   const toggleOnu = (onu: UnconfiguredOnu) =>
-    setData(prev => ({
-      ...prev,
-      selectedOnus: prev.selectedOnus.some(o => o.sn === onu.sn)
+    setData(prev => {
+      const exists = prev.selectedOnus.some(o => o.sn === onu.sn);
+      const nextSelected = exists
         ? prev.selectedOnus.filter(o => o.sn !== onu.sn)
-        : [...prev.selectedOnus, onu],
-    }));
+        : [...prev.selectedOnus, onu];
+      const matched = onu.matched_type || (
+        onu.sn.toUpperCase().startsWith('ZTEG')
+          ? (onuTypes.includes('ZXHN-F670L') ? 'ZXHN-F670L' : onuTypes.includes('ZXHN-F660') ? 'ZXHN-F660' : '')
+          : onu.sn.toUpperCase().startsWith('HWTC') ? 'HUAWEI'
+          : onu.sn.toUpperCase().startsWith('FHTT') ? 'FIBERHOME'
+          : ''
+      );
+      return {
+        ...prev,
+        selectedOnus: nextSelected,
+        onuType: !exists && matched && onuTypes.includes(matched) ? matched : prev.onuType,
+      };
+    });
 
   // Provision
   const provision = async () => {
@@ -434,8 +454,9 @@ export function ProvisionWizard({ manualMode = false }: { manualMode?: boolean }
       const slot = match ? parseInt(match[2]) : 1;
       const port = match ? parseInt(match[3]) : 1;
       const isEpon = onu.pon_port.includes('epon-olt') || onu.pon_port.includes('epon_olt') || onu.is_epon === true;
-      // Universal onu-type name differs per PON type ('All' for GPON, 'ALL-EPON' for EPON)
-      const onuTypeToSend = isEpon && data.onuType === 'All' ? 'ALL-EPON' : data.onuType;
+      const preferredZteType = onuTypes.includes('ZXHN-F670L') ? 'ZXHN-F670L' : onuTypes.includes('ZXHN-F660') ? 'ZXHN-F660' : onuTypes[0] || 'ZXHN-F660';
+      const fallbackType = isEpon ? 'ALL-EPON' : (onuTypes.includes('All') ? 'All' : preferredZteType);
+      const onuTypeToSend = (data.onuType && data.onuType !== 'All') ? data.onuType : (onu.matched_type || fallbackType);
 
       try {
         const r = await fetch('/api/provision/unified', {
