@@ -221,9 +221,17 @@ def detect_model_from_sn(sn, vendor):
 
 
 def parse_pon_index(pon_index):
+    """Parse ZTE C320/C300 GPON ponIndex to (slot, port).
+    Format: 0x10{slot:02x}{port:02x}00 — e.g. 0x10020300 = slot 2, port 3."""
+    if pon_index >= 0x10000000:
+        slot = (pon_index >> 16) & 0xFF
+        port = (pon_index >> 8) & 0xFF
+        return slot, port
     if pon_index >= BOARD2_BASE:
         return 2, (pon_index - BOARD2_BASE) // PON_INCREMENT
-    return 1, (pon_index - BOARD1_BASE) // PON_INCREMENT
+    if pon_index >= BOARD1_BASE:
+        return 1, (pon_index - BOARD1_BASE) // PON_INCREMENT
+    return 0, 0
 
 
 # ==================== SNMP COLLECTOR (Slim API) ====================
@@ -658,8 +666,8 @@ class SNMPCollector:
         """
         onus = []
         for pon_index, onu_slot in onu_keys:
-            frame, port = parse_pon_index(pon_index)
-            if frame == 0:
+            slot, port = parse_pon_index(pon_index)
+            if slot == 0:
                 continue
 
             detail = self.collect_onu_detail_batch(pon_index, onu_slot)
@@ -667,11 +675,11 @@ class SNMPCollector:
                 continue
 
             onu = {
-                'frame': frame,
-                'slot': frame,
+                'frame': 1,
+                'slot': slot,
                 'port': port,
                 'onu_id': onu_slot,
-                'onu_index': frame * 100000 + frame * 10000 + port * 100 + onu_slot,
+                'onu_index': 1 * 100000 + slot * 10000 + port * 100 + onu_slot,
                 'serial_number': detail['serial_number'],
                 'name': detail['name'],
                 'description': detail['description'],
@@ -935,8 +943,8 @@ class SNMPCollector:
         onus = []
         for key in sorted(all_keys):
             pon_index, onu_slot = key
-            frame, port = parse_pon_index(pon_index)
-            if frame == 0: continue  # invalid ponIndex
+            slot, port = parse_pon_index(pon_index)
+            if slot == 0: continue  # invalid ponIndex
 
             sn = sn_by_key.get(key, '')
             if not sn: continue  # skip entries without serial
@@ -956,11 +964,11 @@ class SNMPCollector:
                 status = 'dyinggasp'
 
             onu = {
-                'frame': frame,
-                'slot': frame,  # ZTE C320: board 1 = slot 1, board 2 = slot 2
+                'frame': 1,
+                'slot': slot,
                 'port': port,
                 'onu_id': onu_slot,
-                'onu_index': frame * 100000 + frame * 10000 + port * 100 + onu_slot,
+                'onu_index': 1 * 100000 + slot * 10000 + port * 100 + onu_slot,
                 'serial_number': sn,
                 'name': name_by_key.get(key, ''),
                 'description': desc_by_key.get(key, ''),
