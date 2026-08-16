@@ -3600,8 +3600,11 @@ def scan_unconfigured():
             if 'E-HUAWEI' in reg_types: return 'E-HUAWEI'
         if 'FHTT' in sn_up:
             if 'FIBERHOME' in reg_types: return 'FIBERHOME'
+        if '0425' in ml:
+            for preferred in ['G-0425G-H', 'NOKIA-G0425G', 'NOKIA']:
+                if preferred in reg_types: return preferred
         if 'ALCL' in sn_up or 'NOKIA' in sn_up or 'NOKIA' in ml or 'G-' in ml:
-            for preferred in ['NOKIA', 'NOKIA-G240W', 'NOKIA-G010G', 'HUAWEI', 'ZXHN-F660']:
+            for preferred in ['NOKIA', 'G-0425G-H', 'NOKIA-G240W', 'NOKIA-G010G', 'HUAWEI', 'ZXHN-F660']:
                 if preferred in reg_types: return preferred
 
         # Fallback to 'All' if registered, otherwise first registered type
