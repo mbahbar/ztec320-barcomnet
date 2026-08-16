@@ -1728,6 +1728,8 @@ export function RegisterWizard() {
                 )}
               </div>
             </div>
+          )}
+
           {data.template === 'nokia_full' && (
             <div className="p-3 md:p-4 rounded-lg bg-glass border border-accent/20 space-y-4">
               <h4 className="text-sm font-semibold text-accent">Nokia Full (NOKIA-G0425G-H / G-240W / G-140W)</h4>
