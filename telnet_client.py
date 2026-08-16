@@ -1436,11 +1436,9 @@ class TelnetCollector:
                 sc(f'vlan port eth_0/4 mode hybrid def-vlan {vlan}')
                 pppoe_user = extra.get('pppoe_user', '')
                 pppoe_pass = extra.get('pppoe_pass', '')
-                vlan_profile = extra.get('vlan_profile', 'pppoe')
+                sc('wan 1 service internet host 1')
                 if pppoe_user:
-                    sc(f'wan-ip 1 mode pppoe username {pppoe_user} password {pppoe_pass} vlan-profile {vlan_profile} host 1')
-                else:
-                    sc(f'wan-ip 1 mode pppoe vlan-profile {vlan_profile} host 1')
+                    sc(f'pppoe 1 nat enable user {pppoe_user} password {pppoe_pass}')
 
             elif template == 'fiberhome_veip':
                 tr069_vlan = extra.get('tr069_vlan', 1010)

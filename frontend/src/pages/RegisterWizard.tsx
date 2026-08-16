@@ -89,8 +89,8 @@ function generateRegisterScript(d: WizardData): string {
     lines.push(`  vlan port eth_0/1 mode hybrid def-vlan ${vlan}`);
     lines.push(`  vlan port eth_0/2 mode hybrid def-vlan ${vlan}`);
     lines.push(`  vlan port eth_0/3 mode hybrid def-vlan ${vlan}`);
-    lines.push(`  vlan port eth_0/4 mode hybrid def-vlan ${vlan}`);
-    lines.push(`  wan-ip 1 mode pppoe username ${e.pppoe_user || ''} password ${e.pppoe_pass || ''} vlan-profile ${e.vlan_profile || 'pppoe'} host 1`);
+    lines.push('  wan 1 service internet host 1');
+    if (e.pppoe_user) lines.push(`  pppoe 1 nat enable user ${e.pppoe_user} password ${e.pppoe_pass || ''}`);
   } else if (d.template === 'zte_single') {
     lines.push(`  tcont 1 name ${svcName} profile ${d.tcontProfile}`);
     lines.push('  gemport 1 tcont 1');
