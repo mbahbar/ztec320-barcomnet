@@ -283,11 +283,9 @@ function generateRegisterScript(d: WizardData): string {
       else lines.push('  tr069-mgmt 1 untag');
     }
   } else if (d.template === 'huawei_full') {
-    const vlanProfile = e.vlan_profile || 'genieacs';
     const vlans = Array.isArray(e.vlans) && e.vlans.length > 0 ? e.vlans : [
-      { vlan: e.mgmt_vlan || '1010', label: 'Mgmt' },
-      { vlan: e.internet_vlan || '30', label: 'Internet' },
-      { vlan: e.voip_vlan || '151', label: 'VoIP' },
+      { vlan: e.mgmt_vlan || '1005', label: 'Mgmt' },
+      { vlan: e.internet_vlan || '1006', label: 'Internet' },
     ];
     lines.push('  sn-bind enable sn');
     lines.push(`  tcont 1 profile ${d.tcontProfile}`);
@@ -299,7 +297,12 @@ function generateRegisterScript(d: WizardData): string {
     lines.push('!');
     lines.push(`pon-onu-mng ${onuIf}`);
     lines.push('  service ServiceONU1 gemport 1');
-    lines.push(`  wan-ip 1 mode dhcp vlan-profile ${vlanProfile} host 1`);
+    if (e.enable_tr069 === 'true' || e.acs_url) {
+      lines.push('  tr069-mgmt 1 state unlock');
+      lines.push(`  tr069-mgmt 1 acs ${e.acs_url || 'http://10.0.0.2:7547'} validate basic username ${e.acs_user || 'admin'} password ${e.acs_pass || 'admin'}`);
+      const tr069Vlan = String(e.tr069_vlan || vlans[0]?.vlan || '1005');
+      lines.push(`  tr069-mgmt 1 tag pri 0 vlan ${tr069Vlan}`);
+    }
   } else if (d.template === 'fiberhome_veip') {
     const vlans = Array.isArray(e.vlans) && e.vlans.length > 0 ? e.vlans : [
       { vlan: e.tr069_vlan || '1010', label: 'TR069' },
@@ -1669,8 +1672,6 @@ export function RegisterWizard() {
                 <p className="text-[10px] text-tx3 mt-1">Setiap VLAN akan dibuatkan service-port pada ONU. Jumlah VLAN fleksibel sesuai kebutuhan tenant.</p>
               </div>
 
-              <div><label className="label-sm mb-1">VLAN Profile Name</label>
-                <input type="text" value={String(data.extra.vlan_profile || 'genieacs')} onChange={e => update('extra', { ...data.extra, vlan_profile: e.target.value })} className="input-field" /></div>
               <div className="space-y-2">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={data.extra.enable_tr069 === 'true'} onChange={e => update('extra', { ...data.extra, enable_tr069: e.target.checked ? 'true' : '' })} />

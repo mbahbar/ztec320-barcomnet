@@ -1693,15 +1693,12 @@ class TelnetCollector:
                 sc('security-mgmt 1 state enable mode forward protocol web ftp telnet ssh https snmp tr069')
 
             elif template == 'huawei_full':
-                vlan_profile = extra.get('vlan_profile', 'genieacs')
                 # Dynamic VLAN list from extra.vlans (array of {vlan, label})
-                # Backward compat: if no vlans list, build from old mgmt/internet/voip fields
                 vlans_raw = extra.get('vlans', [])
                 if not vlans_raw:
                     vlans_raw = [
-                        {'vlan': extra.get('mgmt_vlan', 1010), 'label': 'Mgmt'},
-                        {'vlan': extra.get('internet_vlan', 30), 'label': 'Internet'},
-                        {'vlan': extra.get('voip_vlan', 151), 'label': 'VoIP'},
+                        {'vlan': extra.get('mgmt_vlan', 1005), 'label': 'Mgmt'},
+                        {'vlan': extra.get('internet_vlan', 1006), 'label': 'Internet'},
                     ]
                 # sn-bind enable sn
                 sc('sn-bind enable sn')
@@ -1715,8 +1712,17 @@ class TelnetCollector:
                 self._send_command(tn, f'pon-onu-mng {onu_if}')
                 # Service binding — no VLAN in service definition (matching running-config)
                 sc('service ServiceONU1 gemport 1')
-                # WAN IP via DHCP with VLAN profile (GenieACS manages TR069)
-                sc(f'wan-ip 1 mode dhcp vlan-profile {vlan_profile} host 1')
+                if extra.get('enable_tr069') == 'true' or extra.get('acs_url'):
+                    sc('tr069-mgmt 1 state unlock')
+                    acs_url = extra.get('acs_url', 'http://10.0.0.2:7547')
+                    acs_user = extra.get('acs_user', 'admin')
+                    acs_pass = extra.get('acs_pass', 'admin')
+                    tr069_vlan = extra.get('tr069_vlan') or str(vlans_raw[0].get('vlan') if isinstance(vlans_raw[0], dict) else 1005)
+                    if acs_user and acs_pass:
+                        sc(f'tr069-mgmt 1 acs {acs_url} validate basic username {acs_user} password {acs_pass}')
+                    else:
+                        sc(f'tr069-mgmt 1 acs {acs_url}')
+                    sc(f'tr069-mgmt 1 tag pri 0 vlan {tr069_vlan}')
 
             elif template == 'nokia_full':
                 # Nokia Full: Multi-VLAN, VEIP, PPPoE/DHCP, TR069, Dual-Band WiFi
