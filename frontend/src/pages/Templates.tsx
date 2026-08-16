@@ -112,6 +112,18 @@ const templates: TemplateInfo[] = [
     tr069Support: true,
     color: 'text-warning',
   },
+  {
+    id: 'nokia_full',
+    name: 'Nokia Full',
+    description: 'Multi-VLAN, VEIP, PPPoE/DHCP, TR069, and Dual-Band WiFi for Nokia ONUs.',
+    icon: <Wifi size={24} />,
+    features: ['Dual-Band 2.4GHz + 5.8GHz', 'Multi-VLAN (Internet, TR069)', 'VEIP mode', 'PPPoE / WAN-IP', 'TR069 / GenieACS'],
+    serviceTypes: ['Internet', 'TR069', 'VoIP'],
+    wanModes: ['WAN-IP PPPoE', 'WAN-IP DHCP', 'PPPoE NAT', 'Setup via ONT'],
+    ssidSupport: true,
+    tr069Support: true,
+    color: 'text-info',
+  },
 ];
 
 export default function Templates() {

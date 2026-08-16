@@ -337,6 +337,43 @@ function generateRegisterScript(d: WizardData): string {
     lines.push(`  tr069-mgmt 1 acs ${e.acs_url || 'http://192.168.54.254:7547'} validate basic username ${e.acs_user || 'acs'} password ${e.acs_pass || 'acs'}`);
     const tr069Vlan = String(vlans.find(v => (v.label || '').toLowerCase().includes('tr069'))?.vlan || vlans[0]?.vlan || '1010');
     lines.push(`  tr069-mgmt 1 tag pri 0 vlan ${tr069Vlan}`);
+  } else if (d.template === 'nokia_full') {
+    const vlans = Array.isArray(e.vlans) && e.vlans.length > 0 ? e.vlans : [
+      { vlan: e.primary_vlan || String(vlan) || '1006', label: 'Internet' },
+      { vlan: e.secondary_vlan || '1005', label: 'TR069' },
+    ];
+    lines.push('  sn-bind enable sn');
+    lines.push(`  tcont 1 profile ${d.tcontProfile}`);
+    lines.push('  gemport 1 tcont 1');
+    if (d.trafficProfile) lines.push(`  gemport 1 traffic-limit downstream ${d.trafficProfile}`);
+    vlans.forEach((_, i) => {
+      if (i > 0) {
+        lines.push(`  tcont ${i + 1} profile ${d.tcontProfile}`);
+        lines.push(`  gemport ${i + 1} tcont ${i + 1}`);
+      }
+    });
+    vlans.forEach((v, i) => {
+      const vid = String(v.vlan || '');
+      lines.push(`  service-port ${i + 1} vport ${i + 1} user-vlan ${vid} vlan ${vid}`);
+      lines.push(`  service-port ${i + 1} description Service-${i + 1}`);
+    });
+    lines.push('!');
+    lines.push(`pon-onu-mng ${onuIf}`);
+    vlans.forEach((v, i) => {
+      const vid = String(v.vlan || '');
+      lines.push(`  service Service${i + 1} gemport ${i + 1} vlan ${vid}`);
+    });
+    lines.push('  vlan port veip_1 mode hybrid');
+    if (e.enable_pppoe === 'true' && e.pppoe_user) {
+      lines.push(`  wan-ip 1 mode pppoe username ${e.pppoe_user} password ${e.pppoe_pass || ''} vlan-profile ${e.vlan_profile || `PPPoE-${vlans[0].vlan}`} host 1`);
+      lines.push('  security-mgmt 1 state enable mode forward');
+    }
+    if (e.enable_tr069 === 'true') {
+      lines.push('  tr069-mgmt 1 state unlock');
+      lines.push(`  tr069-mgmt 1 acs ${e.acs_url || 'http://192.168.54.254:7547'} validate basic username ${e.acs_user || 'acs'} password ${e.acs_pass || 'acs'}`);
+      const tr069Vlan = String(vlans.find(v => (v.label || '').toLowerCase().includes('tr069'))?.vlan || vlans[1]?.vlan || '1005');
+      lines.push(`  tr069-mgmt 1 tag pri 0 vlan ${tr069Vlan}`);
+    }
   }
 
   // SSID config (dynamic from ssids array, all templates)
@@ -730,6 +767,7 @@ export function RegisterWizard() {
                 { v: 'zte_multi', l: 'ZTE Multi-Service', desc: '1-4 services, IPTV, TR069' },
                 { v: 'huawei_full', l: 'Huawei Full', desc: 'Multi VLAN, WAN DHCP' },
                 { v: 'fiberhome_veip', l: 'Fiberhome VEIP', desc: 'TR069+Internet+VoIP' },
+                { v: 'nokia_full', l: 'Nokia Full', desc: 'Dual Band, Multi-VLAN, VEIP' },
               ].map(t => (
                 <button key={t.v} onClick={() => update('template', t.v)}
                   className={cn(
@@ -1690,6 +1728,181 @@ export function RegisterWizard() {
                 )}
               </div>
             </div>
+          {data.template === 'nokia_full' && (
+            <div className="p-3 md:p-4 rounded-lg bg-glass border border-accent/20 space-y-4">
+              <h4 className="text-sm font-semibold text-accent">Nokia Full (NOKIA-G0425G-H / G-240W / G-140W)</h4>
+
+              {/* Dynamic VLAN list */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="label-sm">VLAN List (Service Ports)</label>
+                  <button type="button" onClick={() => {
+                    const cur = Array.isArray(data.extra.vlans) ? data.extra.vlans : [];
+                    update('extra', { ...data.extra, vlans: [...cur, { vlan: '', label: '' }] });
+                  }} className="px-2 py-1 text-xs rounded bg-accent/15 text-accent hover:bg-accent/25 transition-colors flex items-center gap-1">
+                    <Plus size={12} /> Add VLAN
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {(Array.isArray(data.extra.vlans) && data.extra.vlans.length > 0 ? data.extra.vlans : [
+                    { vlan: data.extra.primary_vlan || String(data.vlan || '1006'), label: 'Internet' },
+                    { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
+                  ]).map((v, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <span className="text-[10px] text-tx3 w-6 flex-shrink-0">#{i + 1}</span>
+                      {vlanList.length > 0 ? (
+                        <select value={v.vlan || ''} onChange={e => {
+                          const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
+                            { vlan: data.extra.primary_vlan || String(data.vlan || '1006'), label: 'Internet' },
+                            { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
+                          ];
+                          cur[i] = { ...cur[i], vlan: e.target.value };
+                          update('extra', { ...data.extra, vlans: cur });
+                        }} className="input-field flex-1">
+                          <option value="">Select VLAN...</option>
+                          {vlanList.map(vl => <option key={vl.vlan_id} value={vl.vlan_id}>{vl.vlan_id} — {vl.name || '(unnamed)'}</option>)}
+                        </select>
+                      ) : (
+                        <input type="number" value={v.vlan || ''} placeholder="VLAN ID"
+                          onChange={e => {
+                            const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
+                              { vlan: data.extra.primary_vlan || String(data.vlan || '1006'), label: 'Internet' },
+                              { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
+                            ];
+                            cur[i] = { ...cur[i], vlan: e.target.value };
+                            update('extra', { ...data.extra, vlans: cur });
+                          }}
+                          className="input-field flex-1" min={1} max={4094} />
+                      )}
+                      <input type="text" value={v.label || ''} placeholder="Label (opt)"
+                        onChange={e => {
+                          const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
+                            { vlan: data.extra.primary_vlan || String(data.vlan || '1006'), label: 'Internet' },
+                            { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
+                          ];
+                          cur[i] = { ...cur[i], label: e.target.value };
+                          update('extra', { ...data.extra, vlans: cur });
+                        }}
+                        className="input-field flex-1" />
+                      <button type="button" onClick={() => {
+                        const cur = Array.isArray(data.extra.vlans) ? data.extra.vlans.filter((_, idx) => idx !== i) : [];
+                        update('extra', { ...data.extra, vlans: cur });
+                      }} className="p-1.5 rounded text-danger hover:bg-danger/10 flex-shrink-0">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-tx3 mt-1">Default: #1=Internet, #2=TR069. Tambah/hapus VLAN sesuai kebutuhan.</p>
+              </div>
+
+              {/* PPPoE */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={data.extra.enable_pppoe === 'true'} onChange={e => update('extra', { ...data.extra, enable_pppoe: e.target.checked ? 'true' : '' })} />
+                  <span className="text-sm font-medium">Enable PPPoE</span>
+                </label>
+                {data.extra.enable_pppoe === 'true' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
+                    <div><label className="label-sm mb-1">PPPoE Username</label>
+                      <input type="text" value={String(data.extra.pppoe_user || '')} onChange={e => update('extra', { ...data.extra, pppoe_user: e.target.value })} className="input-field" placeholder="PPPoE Username" /></div>
+                    <div><label className="label-sm mb-1">PPPoE Password</label>
+                      <div className="relative">
+                        <input type={data.extra._show_pppoe_pass === 'true' ? 'text' : 'password'} value={String(data.extra.pppoe_pass || '')} onChange={e => update('extra', { ...data.extra, pppoe_pass: e.target.value })} className="input-field pr-10" placeholder="PPPoE Password" />
+                        <button type="button" onClick={() => update('extra', { ...data.extra, _show_pppoe_pass: data.extra._show_pppoe_pass === 'true' ? '' : 'true' })} className="absolute right-2 top-1/2 -translate-y-1/2 text-tx3 hover:text-tx1">{data.extra._show_pppoe_pass === 'true' ? '🙈' : '👁'}</button>
+                      </div></div>
+                  </div>
+                )}
+              </div>
+
+              {/* Dynamic SSID List (up to 8) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">WiFi SSID List (Dual-Band 2.4GHz + 5.8GHz)</span>
+                  <button type="button" onClick={() => {
+                    const cur: { port: string; name: string; pass: string; auth: string; vlan: string; enabled: boolean; hidden: boolean }[] = Array.isArray(data.extra.ssids) ? data.extra.ssids as any : [];
+                    if (cur.length < 8) {
+                      const defaultPorts = ['wifi_0/1', 'wifi_0/5', 'wifi_0/2', 'wifi_0/6', 'wifi_0/3', 'wifi_0/7', 'wifi_0/4', 'wifi_0/8'];
+                      cur.push({ port: defaultPorts[cur.length] || `wifi_0/${cur.length + 1}`, name: '', pass: '', auth: 'wpa2', vlan: '', enabled: true, hidden: false });
+                      update('extra', { ...data.extra, ssids: cur });
+                    }
+                  }} className="px-2 py-1 rounded-lg bg-accent text-white text-xs font-medium hover:bg-accent-hover">+ Add SSID</button>
+                </div>
+                {(() => {
+                  const ssids = Array.isArray(data.extra.ssids) ? data.extra.ssids : [];
+                  if (ssids.length === 0) {
+                    return <p className="text-xs text-tx3">No SSIDs added. Click "+ Add SSID" to configure WiFi (2.4GHz / 5.8GHz).</p>;
+                  }
+                  return (
+                    <div className="space-y-2">
+                      {ssids.map((s: { port: string; name: string; pass: string; auth: string; vlan: string; enabled: boolean; hidden: boolean }, i: number) => {
+                        const portNum = parseInt(s.port.replace('wifi_0/', '') || '1');
+                        const is5G = portNum >= 5;
+                        return (
+                          <div key={i} className="p-3 rounded-lg border border-brd bg-glass space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className={cn('px-2 py-0.5 rounded text-[10px] font-bold uppercase', is5G ? 'bg-info/20 text-info' : 'bg-accent/20 text-accent')}>{is5G ? '5.8 GHz' : '2.4 GHz'}</span>
+                                <span className="text-xs font-medium">{s.port}</span>
+                              </div>
+                              <button type="button" onClick={() => update('extra', { ...data.extra, ssids: ssids.filter((_, idx) => idx !== i) })} className="text-danger hover:text-danger/80 text-xs flex items-center gap-1">
+                                <Trash2 size={12} /> Remove
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                              <div>
+                                <label className="text-[10px] text-tx3 font-medium uppercase">SSID Name</label>
+                                <input type="text" value={s.name} onChange={e => { const next = [...ssids]; next[i] = { ...s, name: e.target.value }; update('extra', { ...data.extra, ssids: next }); }} className="input-field" placeholder={is5G ? 'BARCOM-5G' : 'BARCOM'} />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-tx3 font-medium uppercase">Auth</label>
+                                <select value={s.auth} onChange={e => { const next = [...ssids]; next[i] = { ...s, auth: e.target.value }; update('extra', { ...data.extra, ssids: next }); }} className="input-field">
+                                  <option value="wpa2">WPA2-PSK</option>
+                                  <option value="wpa">WPA-PSK</option>
+                                  <option value="mixed">WPA/WPA2</option>
+                                  <option value="open">Open</option>
+                                </select>
+                              </div>
+                              {s.auth !== 'open' && (
+                                <div>
+                                  <label className="text-[10px] text-tx3 font-medium uppercase">Password</label>
+                                  <input type="password" value={s.pass} onChange={e => { const next = [...ssids]; next[i] = { ...s, pass: e.target.value }; update('extra', { ...data.extra, ssids: next }); }} className="input-field" placeholder="Min 8 chars" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* TR069 */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={data.extra.enable_tr069 === 'true'} onChange={e => update('extra', { ...data.extra, enable_tr069: e.target.checked ? 'true' : '' })} />
+                  <span className="text-sm font-medium">Enable TR069/ACS Remote Management</span>
+                </label>
+                {data.extra.enable_tr069 === 'true' && (
+                  <div className="pl-6 space-y-3">
+                    <div><label className="label-sm mb-1">TR069 Profile</label>
+                      <select value={data.extra.tr069_profile_id || ''} onChange={e => selectTr069Profile(e.target.value)} className="input-field">
+                        <option value="">Select Profile...</option>
+                        {tr069Profiles.map(p => <option key={p.id} value={p.id}>{p.name} — {p.acs_url}</option>)}
+                      </select></div>
+                    {data.extra.tr069_profile_id && (
+                      <div className="grid grid-cols-2 gap-3 text-xs text-tx3">
+                        <div>ACS URL: <span className="text-tx1 font-mono">{data.extra.acs_url}</span></div>
+                        <div>Username: <span className="text-tx1">{data.extra.acs_user}</span></div>
+                        <div>Password: <span className="text-tx1 font-mono">{data.extra._show_acs_pass === 'true' ? data.extra.acs_pass : '••••••••'}</span></div>
+                        <div>VLAN: <span className="text-tx1 font-mono">{data.extra.tr069_vlan}</span></div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           <hr className="border-brd" />
@@ -1927,6 +2140,29 @@ export function RegisterWizard() {
                       <ConfigRow label="ACS User" value={String(data.extra.acs_user || '-')} />
                       <ConfigRow label="TR069 VLAN Mode" value={data.extra.tr069_vlan_mode || 'untag'} />
                       {data.extra.tr069_vlan_mode === 'tag' && <ConfigRow label="TR069 VLAN" value={String(data.extra.tr069_vlan || '-')} />}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {data.template === 'nokia_full' && (
+                <div className="space-y-1">
+                  {(() => {
+                    const vlans = Array.isArray(data.extra.vlans) && data.extra.vlans.length > 0 ? data.extra.vlans : [
+                      { vlan: data.extra.primary_vlan || String(data.vlan || '1006'), label: 'Internet' },
+                      { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
+                    ];
+                    return vlans.map((v, i) => (
+                      <ConfigRow key={i} label={`VLAN #${i + 1}${v.label ? ` (${v.label})` : ''}`} value={String(v.vlan || '-')} />
+                    ));
+                  })()}
+                  <ConfigRow label="PPPoE" value={data.extra.enable_pppoe === 'true' ? `User: ${data.extra.pppoe_user || '-'}` : 'Disabled'} />
+                  <ConfigRow label="TR069/ACS" value={data.extra.enable_tr069 === 'true' ? 'Enabled' : 'Disabled'} />
+                  {data.extra.enable_tr069 === 'true' && (
+                    <>
+                      <ConfigRow label="ACS URL" value={String(data.extra.acs_url || '-')} />
+                      <ConfigRow label="ACS User" value={String(data.extra.acs_user || '-')} />
+                      <ConfigRow label="TR069 VLAN" value={String(data.extra.tr069_vlan || '-')} />
                     </>
                   )}
                 </div>

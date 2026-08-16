@@ -3469,7 +3469,7 @@ def pre_register_onu():
     name = data.get('name', '')
     description = data.get('description', '')
     configure = data.get('configure', True)
-    template = data.get('template', 'bridge')  # bridge|pppoe|fiberhome_veip|zte_full|zte_single|huawei_full|zte_multi
+    template = data.get('template', 'bridge')  # bridge|pppoe|fiberhome_veip|zte_full|zte_single|huawei_full|nokia_full|zte_multi
     extra = data.get('extra', {})  # Template-specific extra config
     traffic_profile = data.get('traffic_profile', '')
     sla_profile = data.get('sla_profile', '') or extra.get('sla_profile', '')

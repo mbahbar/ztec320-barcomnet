@@ -1698,6 +1698,46 @@ class TelnetCollector:
                 # WAN IP via DHCP with VLAN profile (GenieACS manages TR069)
                 sc(f'wan-ip 1 mode dhcp vlan-profile {vlan_profile} host 1')
 
+            elif template == 'nokia_full':
+                # Nokia Full: Multi-VLAN, VEIP, PPPoE/DHCP, TR069, Dual-Band WiFi
+                vlans_raw = extra.get('vlans', [])
+                if not vlans_raw:
+                    vlans_raw = [
+                        {'vlan': extra.get('primary_vlan', vlan), 'label': 'Internet'},
+                        {'vlan': extra.get('secondary_vlan', 1005), 'label': 'TR069'},
+                    ]
+                traffic_profile = extra.get('traffic_profile', '')
+                sc('sn-bind enable sn')
+                for idx, v in enumerate(vlans_raw, 1):
+                    vid = v.get('vlan', v) if isinstance(v, dict) else v
+                    sc(f'tcont {idx} profile {tcont_profile}')
+                    sc(f'gemport {idx} tcont {idx}')
+                    if traffic_profile:
+                        sc(f'gemport {idx} traffic-limit downstream {traffic_profile}')
+                    sc(f'service-port {idx} vport {idx} user-vlan {vid} vlan {vid}')
+                    sc(f'service-port {idx} description Service-{idx}')
+                self._send_command(tn, 'exit')
+                self._send_command(tn, f'pon-onu-mng {onu_if}')
+                for idx, v in enumerate(vlans_raw, 1):
+                    vid = v.get('vlan', v) if isinstance(v, dict) else v
+                    sc(f'service Service{idx} gemport {idx} vlan {vid}')
+                sc('vlan port veip_1 mode hybrid')
+                pppoe_user = extra.get('pppoe_user', '')
+                pppoe_pass = extra.get('pppoe_pass', '')
+                vlan_profile = extra.get('vlan_profile', f'PPPoE-{vlan}')
+                if extra.get('enable_pppoe') == 'true' and pppoe_user:
+                    sc(f'wan-ip 1 mode pppoe username {pppoe_user} password {pppoe_pass} vlan-profile {vlan_profile} host 1')
+                    sc('security-mgmt 1 state enable mode forward')
+                if extra.get('enable_tr069') == 'true':
+                    acs_url = extra.get('acs_url', 'http://192.168.54.254:7547')
+                    acs_user = extra.get('acs_user', 'acs')
+                    acs_pass = extra.get('acs_pass', 'acs')
+                    tr069_vlan = extra.get('tr069_vlan', '')
+                    sc('tr069-mgmt 1 state unlock')
+                    sc(f'tr069-mgmt 1 acs {acs_url} validate basic username {acs_user} password {acs_pass}')
+                    if tr069_vlan:
+                        sc(f'tr069-mgmt 1 tag pri 0 vlan {tr069_vlan}')
+
             elif template == 'zte_multi':
                 # Multi-service WAN config (matching r-config CLI output exactly)
                 # Service types: internet, tr069, iptv, bridge
