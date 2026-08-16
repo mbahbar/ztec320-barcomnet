@@ -3585,7 +3585,21 @@ def scan_unconfigured():
             for rt in reg_types:
                 if rt.upper() == base or base.startswith(rt.upper()):
                     return rt
-        # ZTE model heuristics (F670, F672 -> ZXHN-F670L or ZXHN-F680)
+        # 1. FiberHome (FHTT, FHTC, FHHT, HG6xxx, AN5506, etc.)
+        if sn_up.startswith('FHTT') or sn_up.startswith('FHTC') or sn_up.startswith('FHHT') or 'FIBERHOME' in ml or 'HG6' in ml or 'AN55' in ml:
+            if 'FIBERHOME' in reg_types: return 'FIBERHOME'
+
+        # 2. Nokia (ALCL, NOKIA, G-0425, G-240, etc.)
+        if sn_up.startswith('ALCL') or 'NOKIA' in sn_up or 'NOKIA' in ml or '0425' in ml or 'G-' in ml:
+            for preferred in ['NOKIA-G0425G-H', 'NOKIA', 'NOKIA-G240W', 'NOKIA-G010G', 'HUAWEI', 'ZXHN-F660']:
+                if preferred in reg_types: return preferred
+
+        # 3. Huawei (HWTC, HG8xxx, EG8xxx, HS8xxx, etc.)
+        if sn_up.startswith('HWTC') or 'HUAWEI' in ml or 'HG8' in ml or 'EG8' in ml or 'HS8' in ml:
+            if 'HUAWEI' in reg_types: return 'HUAWEI'
+            if 'E-HUAWEI' in reg_types: return 'E-HUAWEI'
+
+        # 4. ZTE (ZTEG, F670, F672, F660, F609, F601, etc.)
         if 'F67' in ml or sn_up.startswith('ZTEG'):
             for preferred in ['ZXHN-F670L', 'ZXHN-F660', 'ZXHN-F609', 'ZXHN-F680', 'ZTE-F601']:
                 if preferred in reg_types: return preferred
@@ -3595,17 +3609,11 @@ def scan_unconfigured():
         if 'F60' in ml:
             for preferred in ['ZXHN-F609', 'ZTE-F601', 'ZXHN-F660']:
                 if preferred in reg_types: return preferred
-        if 'HG' in ml or 'HWTC' in sn_up:
+
+        # 5. Generic HG fallback (Huawei / Fiberhome)
+        if 'HG' in ml:
             if 'HUAWEI' in reg_types: return 'HUAWEI'
-            if 'E-HUAWEI' in reg_types: return 'E-HUAWEI'
-        if 'FHTT' in sn_up:
             if 'FIBERHOME' in reg_types: return 'FIBERHOME'
-        if '0425' in ml:
-            for preferred in ['NOKIA-G0425G-H', 'NOKIA']:
-                if preferred in reg_types: return preferred
-        if 'ALCL' in sn_up or 'NOKIA' in sn_up or 'NOKIA' in ml or 'G-' in ml:
-            for preferred in ['NOKIA-G0425G-H', 'NOKIA', 'NOKIA-G240W', 'NOKIA-G010G', 'HUAWEI', 'ZXHN-F660']:
-                if preferred in reg_types: return preferred
 
         # Fallback to 'All' if registered, otherwise first registered type
         if 'All' in reg_types:
