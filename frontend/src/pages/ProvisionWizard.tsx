@@ -1009,7 +1009,16 @@ export function ProvisionWizard({ manualMode = false }: { manualMode?: boolean }
                       <label className="text-[10px] text-tx3 font-medium uppercase">WiFi Port</label>
                       <select value={s.port} onChange={e => { const next = [...(data.wifi.ssids || [])]; next[i] = { ...s, port: e.target.value }; update('wifi', { ...data.wifi, ssids: next }); }}
                         className="h-8 px-2 rounded-lg bg-glass border border-brd text-xs w-full">
-                        {['wifi_0/1', 'wifi_0/2', 'wifi_0/3', 'wifi_0/4', 'wifi_0/5', 'wifi_0/6', 'wifi_0/7', 'wifi_0/8'].map(p => <option key={p} value={p}>{p}</option>)}
+                        {[
+                          { p: 'wifi_0/1', label: 'wifi_0/1 (2.4 GHz)' },
+                          { p: 'wifi_0/5', label: 'wifi_0/5 (5.8 GHz)' },
+                          { p: 'wifi_0/2', label: 'wifi_0/2 (2.4 GHz)' },
+                          { p: 'wifi_0/6', label: 'wifi_0/6 (5.8 GHz)' },
+                          { p: 'wifi_0/3', label: 'wifi_0/3 (2.4 GHz)' },
+                          { p: 'wifi_0/7', label: 'wifi_0/7 (5.8 GHz)' },
+                          { p: 'wifi_0/4', label: 'wifi_0/4 (2.4 GHz)' },
+                          { p: 'wifi_0/8', label: 'wifi_0/8 (5.8 GHz)' },
+                        ].map(opt => <option key={opt.p} value={opt.p}>{opt.label}</option>)}
                       </select>
                     </div>
                     <div>

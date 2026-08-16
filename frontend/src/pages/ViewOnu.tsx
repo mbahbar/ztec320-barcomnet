@@ -1252,7 +1252,16 @@ function SectionEditModal({ data, onuId, oltId, onClose, onSuccess }: { data: Re
           {section === 'wifi' && (
             <div><label className="label-sm mb-1">SSID Number</label>
               <select value={ssidNum} onChange={e => setSsidNum(e.target.value)} className="input-field">
-                {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>SSID {n}</option>)}
+                {[
+                  { n: 1, label: 'SSID 1 (2.4 GHz - Main)' },
+                  { n: 2, label: 'SSID 2 (2.4 GHz - Guest)' },
+                  { n: 3, label: 'SSID 3 (2.4 GHz)' },
+                  { n: 4, label: 'SSID 4 (2.4 GHz)' },
+                  { n: 5, label: 'SSID 5 (5.8 GHz - Main)' },
+                  { n: 6, label: 'SSID 6 (5.8 GHz - Guest)' },
+                  { n: 7, label: 'SSID 7 (5.8 GHz)' },
+                  { n: 8, label: 'SSID 8 (5.8 GHz)' },
+                ].map(opt => <option key={opt.n} value={opt.n}>{opt.label}</option>)}
               </select>
             </div>
           )}
