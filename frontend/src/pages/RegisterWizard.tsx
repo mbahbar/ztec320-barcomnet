@@ -1683,14 +1683,27 @@ export function RegisterWizard() {
                         <option value="">Select Profile...</option>
                         {tr069Profiles.map(p => <option key={p.id} value={p.id}>{p.name} — {p.acs_url}</option>)}
                       </select></div>
-                    {data.extra.tr069_profile_id && (
-                      <div className="grid grid-cols-2 gap-3 text-xs text-tx3">
-                        <div>ACS URL: <span className="text-tx1 font-mono">{data.extra.acs_url}</span></div>
-                        <div>Username: <span className="text-tx1">{data.extra.acs_user}</span></div>
-                        <div>Password: <span className="text-tx1 font-mono">{data.extra._show_acs_pass === 'true' ? data.extra.acs_pass : '••••••••'}</span> <button type="button" onClick={() => update('extra', { ...data.extra, _show_acs_pass: data.extra._show_acs_pass === 'true' ? '' : 'true' })} className="text-tx3 hover:text-accent ml-1">{data.extra._show_acs_pass === 'true' ? '🙈' : '👁'}</button></div>
-                        <div>VLAN: <span className="text-tx1 font-mono">{data.extra.tr069_vlan}</span> <span className="text-tx3">({data.extra.tr069_vlan_mode || 'tag'})</span></div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="label-sm mb-1">ACS URL</label>
+                        <input type="text" value={String(data.extra.acs_url || '')} onChange={e => update('extra', { ...data.extra, acs_url: e.target.value })} className="input-field font-mono text-xs" placeholder="http://10.0.0.2:7547" />
                       </div>
-                    )}
+                      <div>
+                        <label className="label-sm mb-1">TR069 VLAN</label>
+                        <input type="text" value={String(data.extra.tr069_vlan || '')} onChange={e => update('extra', { ...data.extra, tr069_vlan: e.target.value })} className="input-field font-mono text-xs" placeholder="1005" />
+                      </div>
+                      <div>
+                        <label className="label-sm mb-1">ACS Username</label>
+                        <input type="text" value={String(data.extra.acs_user || '')} onChange={e => update('extra', { ...data.extra, acs_user: e.target.value })} className="input-field" placeholder="Username (e.g. acs / admin)" />
+                      </div>
+                      <div>
+                        <label className="label-sm mb-1">ACS Password</label>
+                        <div className="relative">
+                          <input type={data.extra._show_acs_pass === 'true' ? 'text' : 'password'} value={String(data.extra.acs_pass || '')} onChange={e => update('extra', { ...data.extra, acs_pass: e.target.value })} className="input-field pr-10" placeholder="Password" />
+                          <button type="button" onClick={() => update('extra', { ...data.extra, _show_acs_pass: data.extra._show_acs_pass === 'true' ? '' : 'true' })} className="absolute right-2 top-1/2 -translate-y-1/2 text-tx3 hover:text-tx1">{data.extra._show_acs_pass === 'true' ? '🙈' : '👁'}</button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
