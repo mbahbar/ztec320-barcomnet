@@ -2131,30 +2131,37 @@ def onu_wan_service_edit(onu_id, svc_idx):
                 # Handle 63869 "Record already exists" — force delete and retry once
                 elif '63869' in low or 'already exists' in low:
                     logger.warning(f"Record exists, force-replacing: {cmd[:60]}")
-                    # Extract pppoe/wan-ip index from command
+                    # Extract pppoe/wan/wan-ip/service index from command
                     if cmd.startswith('pppoe '):
                         idx = cmd.split()[1]
                         tc._send_command(tn, f'no wan {idx} service', timeout=10)
                         tc._send_command(tn, f'no pppoe {idx}', timeout=10)
-                        _t.sleep(0.5)
+                        _t.sleep(1)
                         _, err2 = tc._send_cmd_check(tn, cmd, timeout=10)
-                        if err2 and ('63869' in err2.lower() or 'already exists' in err2.lower()):
-                            last_err = err2  # Still fails after retry
-                        elif err2:
+                        if err2 and 'does not exist' not in err2.lower():
+                            last_err = err2
+                    elif cmd.startswith('wan ') and 'service' in cmd:
+                        # wan N service internet host N
+                        parts = cmd.split()
+                        idx = parts[1] if len(parts) > 1 else '1'
+                        tc._send_command(tn, f'no wan {idx} service', timeout=10)
+                        _t.sleep(1)
+                        _, err2 = tc._send_cmd_check(tn, cmd, timeout=10)
+                        if err2 and 'does not exist' not in err2.lower():
                             last_err = err2
                     elif cmd.startswith('wan-ip '):
                         idx = cmd.split()[1]
                         tc._send_command(tn, f'no wan-ip {idx}', timeout=10)
                         _t.sleep(0.5)
                         _, err2 = tc._send_cmd_check(tn, cmd, timeout=10)
-                        if err2:
+                        if err2 and 'does not exist' not in err2.lower():
                             last_err = err2
                     elif cmd.startswith('service '):
                         # Service record exists — delete and retry
                         tc._send_command(tn, f'no {cmd}', timeout=10)
                         _t.sleep(0.5)
                         _, err2 = tc._send_cmd_check(tn, cmd, timeout=10)
-                        if err2:
+                        if err2 and 'does not exist' not in err2.lower():
                             last_err = err2
                     else:
                         last_err = err
@@ -2191,14 +2198,14 @@ def onu_wan_service_edit(onu_id, svc_idx):
         tc._send_command(tn, f'pon-onu-mng {onu_path}', timeout=10)
 
         # Clean up old ONU-side service entries — order matters on ZTE!
-        # Must remove WAN service binding BEFORE pppoe/wan-ip, else "Record already exists" (63869)
+        # Must remove WAN service binding FIRST, then pppoe/wan-ip, then service record
+        tc._send_command(tn, f'no wan {svc_idx} service', timeout=10)
+        tc._send_command(tn, f'no pppoe {svc_idx}', timeout=10)
+        tc._send_command(tn, f'no wan-ip {svc_idx}', timeout=10)
         tc._send_command(tn, f'no service {service_name}', timeout=10)
         tc._send_command(tn, f'no service {svc_idx}', timeout=10)
-        tc._send_command(tn, f'no wan {svc_idx} service', timeout=10)
-        tc._send_command(tn, f'no wan-ip {svc_idx}', timeout=10)
-        tc._send_command(tn, f'no pppoe {svc_idx}', timeout=10)
         # Brief pause for OLT to process OMCI deletions before re-creating
-        import time as _t; _t.sleep(1)
+        import time as _t; _t.sleep(1.5)
 
         # PPPoE NAT and Wan-IP use iphost — must remove VEIP (mutually exclusive on ZTE C320)
         if status == 'enable' and mode in ('PPPoE NAT', 'Wan-IP'):
@@ -2220,8 +2227,13 @@ def onu_wan_service_edit(onu_id, svc_idx):
                 username = data.get('pppoe_username', '')
                 password = data.get('pppoe_password', '')
                 if username:
-                    sc(f'pppoe {svc_idx} nat enable user {username} password {password}')
+                    # On ZTE C320 V2.1.0: wan MUST come before pppoe
                     sc(f'wan {svc_idx} service internet host {svc_idx}')
+                    sc(f'pppoe {svc_idx} nat enable user {username} password {password}')
+                # Set VLAN on eth ports (hybrid mode for PPPoE)
+                if vlan:
+                    for eth_port in range(1, 5):
+                        tc._send_command(tn, f'vlan port eth_0/{eth_port} mode hybrid def-vlan {vlan}', timeout=10)
 
             elif mode == 'Wan-IP':
                 # Wan-IP requires iphost (same as PPPoE NAT) for ONU-side IP routing
