@@ -388,7 +388,13 @@ export function OnuWizard({ mode }: { mode: WizardMode }) {
       .then(r => r.json()).then(d => { if (d.success && d.types) setOnuTypes(d.types); }).catch(() => {});
     fetch(`/api/olt/${state.oltId}/speed-profiles`, { credentials: 'include' })
       .then(r => r.json()).then(d => {
-        if (d.success && d.tcont) setTcontProfiles(d.tcont);
+        if (d.success && d.tcont && d.tcont.length > 0) {
+          setTcontProfiles(d.tcont);
+          setState(prev => ({
+            ...prev,
+            tcontProfile: prev.tcontProfile && d.tcont.includes(prev.tcontProfile) ? prev.tcontProfile : d.tcont[0]
+          }));
+        }
         if (d.success && d.traffic) setTrafficProfiles(d.traffic);
       }).catch(() => {});
     fetch(`/api/olt/${state.oltId}/vlans`, { credentials: 'include' })

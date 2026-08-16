@@ -3309,7 +3309,15 @@ def provision_unified():
     onu_id = data.get('onu_id', 1)
     serial = data.get('serial', '')
     onu_type = data.get('onu_type', 'All')
-    tcont_profile = data.get('tcont_profile', '1G')
+    tcont_profile = (data.get('tcont_profile') or '').strip()
+    valid_tconts = [p.name for p in SpeedProfile.query.filter_by(olt_id=olt_id, profile_type='tcont').all()]
+    if not tcont_profile or (valid_tconts and tcont_profile not in valid_tconts):
+        if 'default' in valid_tconts:
+            tcont_profile = 'default'
+        elif valid_tconts:
+            tcont_profile = valid_tconts[0]
+        else:
+            tcont_profile = tcont_profile or 'default'
     traffic_profile = data.get('traffic_profile', '')
     name = data.get('name', '')
     description = data.get('description', '')
@@ -3398,7 +3406,15 @@ def pre_register_onu():
     onu_type = data.get('onu_type', 'All')  # Default 'All' per oltc320 reference (universal type)
     serial = data.get('serial', '')
     vlan = data.get('vlan', 100)
-    tcont_profile = data.get('tcont_profile', '1G')
+    tcont_profile = (data.get('tcont_profile') or '').strip()
+    valid_tconts = [p.name for p in SpeedProfile.query.filter_by(olt_id=olt_id, profile_type='tcont').all()]
+    if not tcont_profile or (valid_tconts and tcont_profile not in valid_tconts):
+        if 'default' in valid_tconts:
+            tcont_profile = 'default'
+        elif valid_tconts:
+            tcont_profile = valid_tconts[0]
+        else:
+            tcont_profile = tcont_profile or 'default'
     name = data.get('name', '')
     description = data.get('description', '')
     configure = data.get('configure', True)
