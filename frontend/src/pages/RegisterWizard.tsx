@@ -2131,8 +2131,9 @@ export function RegisterWizard() {
               <InfoBox label="OLT" value={olts.find(o => o.id === data.oltId)?.name || '-'} />
               <InfoBox label="ONUs to Register" value={String(data.selectedOnus.length)} />
               <InfoBox label="ONU Type" value={data.onuType} />
-              <InfoBox label="Template" value={data.template === 'zte_full' ? 'ZTE Dual Band' : data.template === 'zte_multi' ? 'ZTE Multi-Service' : data.template.replace('_', ' ')} />
-              <InfoBox label="VLAN ID" value={String(data.vlan)} />
+              {!['fiberhome_veip', 'nokia_full', 'zte_multi', 'huawei_full'].includes(data.template) && (
+                <InfoBox label="VLAN ID" value={String(data.vlan)} />
+              )}
               <InfoBox label="TCONT Profile" value={data.tcontProfile || '-'} />
               <InfoBox label="Traffic Profile" value={data.trafficProfile || 'None'} />
               <InfoBox label="Auto-Configure" value={data.configure ? 'Yes' : 'No'} />
