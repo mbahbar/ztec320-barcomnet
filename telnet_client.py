@@ -4738,19 +4738,11 @@ class TelnetCollector:
                             })
 
             # ── 10. Ensure WiFi entries ──
-            # Only add defaults if NO wifi config found at all (neither ssid ctrl nor vlan port)
-            has_real_ssid = any(not w.get('ssid_name', '').startswith('Wifi ') for w in result['wifi_entries'])
+            # Only add default Wifi 1 if NO wifi config found at all
             if not result['wifi_entries']:
-                # No WiFi config at all — show default Wifi 1 & 2
                 result['wifi_entries'] = [
-                    {'wifi_num': '1', 'ssid_name': 'Wifi 1', 'status': 'up', 'mode': 'DHCP From Onu', 'vlan': '', 'priority': '0'},
-                    {'wifi_num': '2', 'ssid_name': 'Wifi 2', 'status': 'up', 'mode': 'DHCP From Onu', 'vlan': '', 'priority': '0'}
+                    {'wifi_num': '1', 'ssid_name': 'Wifi 1', 'status': 'up', 'mode': 'DHCP From Onu', 'vlan': '', 'priority': '0'}
                 ]
-            elif not has_real_ssid and len(result['wifi_entries']) == 1:
-                # Only 1 entry with generic name — add a second default
-                existing_num = result['wifi_entries'][0].get('wifi_num', '1')
-                missing_num = '2' if existing_num == '1' else '1'
-                result['wifi_entries'].append({'wifi_num': missing_num, 'ssid_name': f'Wifi {missing_num}', 'status': 'up', 'mode': 'DHCP From Onu', 'vlan': '', 'priority': '0'})
             # Sort by wifi_num
             result['wifi_entries'].sort(key=lambda x: int(x.get('wifi_num', 1)))
             # Ensure every WiFi entry has ssid_auth_type — default to 'open' if no auth line was found
