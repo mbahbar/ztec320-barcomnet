@@ -1442,50 +1442,70 @@ class TelnetCollector:
                 sc('security-mgmt 1 state enable mode forward')
 
             elif template == 'fiberhome_veip':
-                tr069_vlan = extra.get('tr069_vlan', 1010)
-                internet_vlan = extra.get('internet_vlan', 30)
-                voip_vlan = extra.get('voip_vlan', 151)
+                vlans_raw = extra.get('vlans', [])
+                if not vlans_raw:
+                    vlans_raw = [
+                        {'vlan': extra.get('tr069_vlan', 1005), 'label': 'TR069'},
+                        {'vlan': extra.get('internet_vlan', vlan or 1006), 'label': 'Internet'},
+                    ]
                 acs_url = extra.get('acs_url', '') or 'http://192.168.54.254:7547'
                 acs_user = extra.get('acs_user', '') or 'acs'
                 acs_pass = extra.get('acs_pass', '') or 'acs'
                 traffic_profile = extra.get('traffic_profile', '')
                 # sn-bind enable sn
                 sc('sn-bind enable sn')
-                # TCONTs (no name — matching running-config)
-                sc(f'tcont 1 profile {tcont_profile}')
-                sc('gemport 1 tcont 1')
-                if traffic_profile:
-                    sc(f'gemport 1 traffic-limit downstream {traffic_profile}')
-                sc(f'tcont 2 profile {tcont_profile}')
-                sc('gemport 2 tcont 2')
-                sc(f'tcont 3 profile {tcont_profile}')
-                sc('gemport 3 tcont 3')
-                sc(f'service-port 1 vport 1 user-vlan {tr069_vlan} vlan {tr069_vlan}')
-                sc(f'service-port 2 vport 2 user-vlan {internet_vlan} vlan {internet_vlan}')
-                sc(f'service-port 3 vport 3 user-vlan {voip_vlan} vlan {voip_vlan}')
+                # TCONTs & gemports per VLAN
+                for idx, v in enumerate(vlans_raw, 1):
+                    vid = v.get('vlan', v) if isinstance(v, dict) else v
+                    sc(f'tcont {idx} profile {tcont_profile}')
+                    sc(f'gemport {idx} tcont {idx}')
+                    if traffic_profile and idx == 2:
+                        sc(f'gemport {idx} traffic-limit downstream {traffic_profile}')
+                    sc(f'service-port {idx} vport {idx} user-vlan {vid} vlan {vid}')
                 self._send_command(tn, 'exit')
                 self._send_command(tn, f'pon-onu-mng {onu_if}')
                 # Safe-replace: delete old service entries to prevent error 63869
-                for sn in ['service1', 'service2', 'service3']:
+                for sn in ['service1', 'service2', 'service3', 'Service1', 'Service2', 'Service3']:
                     self._send_command(tn, f'no service {sn}', timeout=10)
                 for n in [1, 2, 3]:
                     self._send_command(tn, f'no wan {n} service', timeout=10)
                     self._send_command(tn, f'no wan-ip {n}', timeout=10)
                     self._send_command(tn, f'no pppoe {n}', timeout=10)
                 import time as _t; _t.sleep(1)
-                # Service names matching running-config: service1, 2, 3
-                sc(f'service service1 gemport 1 vlan {tr069_vlan}')
-                sc(f'service 2 gemport 2 vlan {internet_vlan}')
-                sc(f'service 3 gemport 3 vlan {voip_vlan}')
+                for idx, v in enumerate(vlans_raw, 1):
+                    vid = v.get('vlan', v) if isinstance(v, dict) else v
+                    sc(f'service service{idx} gemport {idx} vlan {vid}')
                 sc('vlan port veip_1 mode hybrid')
+                
+                # Find internet and tr069 vlans
+                internet_vlan = str(vlan or 1006)
+                tr069_vlan = str(extra.get('tr069_vlan') or 1005)
+                for v in vlans_raw:
+                    if isinstance(v, dict):
+                        lbl = (v.get('label') or '').lower()
+                        if 'internet' in lbl: internet_vlan = str(v.get('vlan', internet_vlan))
+                        elif 'tr069' in lbl or 'mgmt' in lbl: tr069_vlan = str(v.get('vlan', tr069_vlan))
+                
                 sc(f'vlan port eth_0/1 mode tag vlan {internet_vlan}')
                 sc(f'vlan port eth_0/2 mode tag vlan {internet_vlan}')
                 sc(f'vlan port eth_0/3 mode tag vlan {internet_vlan}')
                 sc(f'vlan port eth_0/4 mode tag vlan {internet_vlan}')
                 sc(f'vlan port wifi_0/1 mode tag vlan {internet_vlan}')
-                sc('tr069-mgmt 1 state unlock')
-                sc(f'tr069-mgmt 1 acs {acs_url} validate basic username {acs_user} password {acs_pass}')
-                sc(f'tr069-mgmt 1 tag pri 0 vlan {tr069_vlan}')
+                
+                # PPPoE support
+                pppoe_user = extra.get('pppoe_user', '')
+                pppoe_pass = extra.get('pppoe_pass', '')
+                vlan_profile = extra.get('vlan_profile', f'PPPoE-{internet_vlan}')
+                if extra.get('enable_pppoe') == 'true' and pppoe_user:
+                    sc(f'wan-ip 1 mode pppoe username {pppoe_user} password {pppoe_pass} vlan-profile {vlan_profile} host 1')
+                    sc('security-mgmt 1 state enable mode forward')
+                
+                # TR069 support
+                if extra.get('enable_tr069') == 'true':
+                    sc('tr069-mgmt 1 state unlock')
+                    sc(f'tr069-mgmt 1 acs {acs_url} validate basic username {acs_user} password {acs_pass}')
+                    if tr069_vlan:
+                        sc(f'tr069-mgmt 1 tag pri 0 vlan {tr069_vlan}')
 
             elif template == 'zte_full':
                 primary_vlan = int(extra.get('primary_vlan') or 30)
