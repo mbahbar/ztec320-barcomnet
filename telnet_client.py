@@ -1424,12 +1424,16 @@ class TelnetCollector:
                 sc(f'service-port 1 vport 1 user-vlan {vlan} vlan {vlan}')
 
             elif template == 'pppoe':
-                sc(f'tcont 1 name {service_name} profile {tcont_profile}')
+                sc(f'tcont 1 profile {tcont_profile}')
                 sc('gemport 1 tcont 1')
+                traffic_prof = extra.get('traffic_profile') or traffic_profile
+                if traffic_prof:
+                    sc(f'gemport 1 traffic-limit downstream {traffic_prof}')
                 sc(f'service-port 1 vport 1 user-vlan {vlan} vlan {vlan}')
+                sc('service-port 1 description Service-1')
                 self._send_command(tn, 'exit')  # exit ONU interface
                 self._send_command(tn, f'pon-onu-mng {onu_if}')
-                sc(f'service {service_name} gemport 1 iphost 1 vlan {vlan}')
+                sc(f'service Service1 gemport 1 iphost 1 vlan {vlan}')
                 pppoe_user = extra.get('pppoe_user', '')
                 pppoe_pass = extra.get('pppoe_pass', '')
                 vlan_profile = extra.get('vlan_profile') or f'PPPoE-{vlan}'

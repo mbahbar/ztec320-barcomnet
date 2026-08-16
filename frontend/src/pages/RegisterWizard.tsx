@@ -80,12 +80,14 @@ function generateRegisterScript(d: WizardData): string {
     lines.push('  gemport 1 tcont 1');
     lines.push(`  service-port 1 vport 1 user-vlan ${vlan} vlan ${vlan}`);
   } else if (d.template === 'pppoe') {
-    lines.push(`  tcont 1 name ${svcName} profile ${d.tcontProfile}`);
+    lines.push(`  tcont 1 profile ${d.tcontProfile}`);
     lines.push('  gemport 1 tcont 1');
+    if (d.trafficProfile) lines.push(`  gemport 1 traffic-limit downstream ${d.trafficProfile}`);
     lines.push(`  service-port 1 vport 1 user-vlan ${vlan} vlan ${vlan}`);
+    lines.push('  service-port 1 description Service-1');
     lines.push('!');
     lines.push(`pon-onu-mng ${onuIf}`);
-    lines.push(`  service ${svcName} gemport 1 iphost 1 vlan ${vlan}`);
+    lines.push(`  service Service1 gemport 1 iphost 1 vlan ${vlan}`);
     lines.push(`  wan-ip 1 mode pppoe username ${e.pppoe_user || ''} password ${e.pppoe_pass || ''} vlan-profile ${e.vlan_profile || `PPPoE-${vlan}`} host 1`);
     lines.push('  security-mgmt 1 state enable mode forward');
   } else if (d.template === 'zte_single') {
