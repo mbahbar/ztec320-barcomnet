@@ -1,4 +1,4 @@
-# Salfanet NMS — ZTE OLT Management System
+# BARCOMNET NMS — ZTE OLT Management System
 
 Sistem manajemen OLT/ONU FTTH untuk perangkat **ZTE** (C320, C300, C300-M, C600, C650). Mendukung kartu **GPON** (GTG) dan **EPON** (ETG). Dibangun dengan Flask + React, mendukung sinkronisasi SNMP/Telnet, monitoring ONU real-time, alerting, provisioning, dan manajemen infrastruktur FTTH dari satu dashboard.
 
