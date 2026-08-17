@@ -1782,19 +1782,19 @@ class TelnetCollector:
                     ]
                 traffic_profile = extra.get('traffic_profile', '')
                 sc('sn-bind enable sn')
+                sc(f'tcont 1 profile {tcont_profile}')
+                sc('gemport 1 tcont 1')
+                if traffic_profile:
+                    sc(f'gemport 1 traffic-limit downstream {traffic_profile}')
                 for idx, v in enumerate(vlans_raw, 1):
                     vid = v.get('vlan', v) if isinstance(v, dict) else v
-                    sc(f'tcont {idx} profile {tcont_profile}')
-                    sc(f'gemport {idx} tcont {idx}')
-                    if traffic_profile:
-                        sc(f'gemport {idx} traffic-limit downstream {traffic_profile}')
-                    sc(f'service-port {idx} vport {idx} user-vlan {vid} vlan {vid}')
+                    sc(f'service-port {idx} vport 1 user-vlan {vid} vlan {vid}')
                     sc(f'service-port {idx} description Service-{idx}')
                 self._send_command(tn, 'exit')
                 self._send_command(tn, f'pon-onu-mng {onu_if}')
                 for idx, v in enumerate(vlans_raw, 1):
                     vid = v.get('vlan', v) if isinstance(v, dict) else v
-                    sc(f'service Service{idx} gemport {idx} vlan {vid}')
+                    sc(f'service Service{idx} gemport 1 vlan {vid}')
                 sc('vlan port veip_1 mode hybrid')
                 sc('vlan port veip_1 vlan 1')
                 internet_vlan = '1006'
