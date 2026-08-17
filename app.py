@@ -3331,9 +3331,14 @@ def provision_unified():
             elif 'E-HUAWEI' in reg_types: onu_type = 'E-HUAWEI'
         elif sn_up.startswith('FHTT'):
             if 'FIBERHOME' in reg_types: onu_type = 'FIBERHOME'
-        elif sn_up.startswith('ALCL'):
-            if 'HUAWEI' in reg_types: onu_type = 'HUAWEI'
-            elif 'ZXHN-F660' in reg_types: onu_type = 'ZXHN-F660'
+        elif sn_up.startswith('ALCL') or sn_up.startswith('NKIA'):
+            for preferred in ['NOKIA', 'NOKIA-G240W', 'NOKIA-G010G', 'NOKIA-G0425G-H']:
+                if preferred in reg_types:
+                    onu_type = preferred
+                    break
+            if not onu_type or onu_type not in reg_types:
+                if 'HUAWEI' in reg_types: onu_type = 'HUAWEI'
+                elif 'ZXHN-F660' in reg_types: onu_type = 'ZXHN-F660'
 
         if not onu_type or (reg_types and onu_type not in reg_types):
             if 'All' in reg_types: onu_type = 'All'
@@ -3448,9 +3453,14 @@ def pre_register_onu():
             elif 'E-HUAWEI' in reg_types: onu_type = 'E-HUAWEI'
         elif sn_up.startswith('FHTT'):
             if 'FIBERHOME' in reg_types: onu_type = 'FIBERHOME'
-        elif sn_up.startswith('ALCL'):
-            if 'HUAWEI' in reg_types: onu_type = 'HUAWEI'
-            elif 'ZXHN-F660' in reg_types: onu_type = 'ZXHN-F660'
+        elif sn_up.startswith('ALCL') or sn_up.startswith('NKIA'):
+            for preferred in ['NOKIA', 'NOKIA-G240W', 'NOKIA-G010G', 'NOKIA-G0425G-H']:
+                if preferred in reg_types:
+                    onu_type = preferred
+                    break
+            if not onu_type or onu_type not in reg_types:
+                if 'HUAWEI' in reg_types: onu_type = 'HUAWEI'
+                elif 'ZXHN-F660' in reg_types: onu_type = 'ZXHN-F660'
 
         if not onu_type or (reg_types and onu_type not in reg_types):
             if 'All' in reg_types: onu_type = 'All'

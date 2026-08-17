@@ -344,8 +344,8 @@ export function ProvisionWizard({ manualMode = false }: { manualMode?: boolean }
   const detectedVendor = useMemo(() => {
     if (data.selectedOnus.length === 0) return 'unknown';
     const sn = data.selectedOnus[0].sn.toUpperCase();
-    if (sn.startsWith('ZTEG') || sn.startsWith('ZICG')) return 'zte';
     if (sn.startsWith('HWTC')) return 'huawei';
+    if (sn.startsWith('ALCL') || sn.startsWith('NKIA')) return 'nokia';
     if (sn.startsWith('FHTT')) return 'fiberhome';
     return 'universal';
   }, [data.selectedOnus]);
@@ -432,6 +432,7 @@ export function ProvisionWizard({ manualMode = false }: { manualMode?: boolean }
         onu.sn.toUpperCase().startsWith('ZTEG')
           ? (onuTypes.includes('ZXHN-F670L') ? 'ZXHN-F670L' : onuTypes.includes('ZXHN-F660') ? 'ZXHN-F660' : '')
           : onu.sn.toUpperCase().startsWith('HWTC') ? 'HUAWEI'
+          : (onu.sn.toUpperCase().startsWith('ALCL') || onu.sn.toUpperCase().startsWith('NKIA')) ? (onuTypes.includes('NOKIA') ? 'NOKIA' : onuTypes.includes('NOKIA-G240W') ? 'NOKIA-G240W' : 'NOKIA')
           : onu.sn.toUpperCase().startsWith('FHTT') ? 'FIBERHOME'
           : ''
       );
