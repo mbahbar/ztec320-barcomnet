@@ -256,6 +256,14 @@ class ZteAdapter(BaseOLTAdapter):
             try:
                 cards = tc._parse_show_card(tc._send_command(tn, 'show card'))
                 fans = tc._parse_show_fan(tc._send_command(tn, 'show fan'))
+                proc_output = tc._send_command(tn, 'show processor')
+                proc_map = tc._parse_show_processor(proc_output)
+                for cd in cards:
+                    slot = cd.get('slot')
+                    if slot in proc_map:
+                        cd['cpu_usage'] = proc_map[slot]['cpu_usage']
+                        cd['memory_usage'] = proc_map[slot]['memory_usage']
+                        cd['memory_total'] = proc_map[slot]['memory_total']
                 return {'slots': cards, 'fans': fans, 'psus': []}
             finally:
                 tn.write('exit\n')
