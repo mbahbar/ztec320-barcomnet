@@ -1796,6 +1796,12 @@ class TelnetCollector:
                     vid = v.get('vlan', v) if isinstance(v, dict) else v
                     sc(f'service Service{idx} gemport {idx} vlan {vid}')
                 sc('vlan port veip_1 mode hybrid')
+                sc('vlan port veip_1 vlan 1')
+                internet_vlan = str(vlan or 1006)
+                for eth_port in range(1, 5):
+                    sc(f'vlan port eth_0/{eth_port} mode tag vlan {internet_vlan}')
+                sc_warn(f'vlan port wifi_0/1 mode tag vlan {internet_vlan}')
+                sc_warn(f'vlan port wifi_0/5 mode tag vlan {internet_vlan}')
                 pppoe_user = extra.get('pppoe_user', '')
                 pppoe_pass = extra.get('pppoe_pass', '')
                 vlan_profile = extra.get('vlan_profile', f'PPPoE-{vlan}')
