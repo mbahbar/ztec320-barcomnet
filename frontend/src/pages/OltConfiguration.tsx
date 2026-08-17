@@ -1340,6 +1340,9 @@ function WanIpTab({ oltId, canManage }: { oltId: number; canManage: boolean }) {
     mutationFn: async (body: Record<string, string>) => {
       const payload: Record<string, string> = {
         name: body.name,
+        ip_mode: body.ip_mode,
+        vlan: body.vlan,
+        priority: body.priority,
         ip_address: body.ip_mode === 'dhcp' ? 'dhcp' : body.ip_address,
         netmask: body.netmask || '',
         gateway: body.gateway || '',
@@ -1348,9 +1351,16 @@ function WanIpTab({ oltId, canManage }: { oltId: number; canManage: boolean }) {
       };
       const r = await fetch(`/api/olt/${oltId}/wan-ip/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
       if (!r.ok) throw new Error('Failed');
+      const res = await r.json();
+      if (!res.success) throw new Error(res.message || 'Failed to add WAN IP profile');
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['olt-wan-ip', oltId] }); toast.success('WAN IP profile added'); setShowAdd(false); },
-    onError: () => toast.error('Failed to add WAN IP profile'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['olt-wan-ip', oltId] });
+      toast.success('WAN IP profile added');
+      setShowAdd(false);
+      setAddForm({ name: '', ip_mode: 'dhcp', vlan: '', priority: '', ip_address: '', netmask: '', gateway: '' });
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to add WAN IP profile'),
   });
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState({ name: '', ip_mode: 'dhcp', vlan: '', priority: '', ip_address: '', netmask: '', gateway: '' });

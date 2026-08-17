@@ -5211,6 +5211,10 @@ def add_wan_ip_profile(olt_id):
     name = data.get('name', '').strip()
     if not name:
         return jsonify({'success': False, 'message': 'Profile name is required'})
+    vlan = data.get('vlan') or ''
+    priority = data.get('priority') or ''
+    dns1 = data.get('dns1', '') or (f'cvlan:{vlan}' if vlan else '')
+    dns2 = data.get('dns2', '') or (f'pri:{priority}' if priority else '')
     from snmp_collector import TelnetCollector, create_cli_collector
     tc = create_cli_collector(olt)
     success, msg = tc.create_wan_ip_profile(
@@ -5218,8 +5222,10 @@ def add_wan_ip_profile(olt_id):
         ip_address=data.get('ip_address', ''),
         netmask=data.get('netmask', ''),
         gateway=data.get('gateway', ''),
-        dns1=data.get('dns1', ''),
-        dns2=data.get('dns2', ''),
+        dns1=dns1,
+        dns2=dns2,
+        vlan=vlan,
+        priority=priority,
     )
     if success:
         profile = WanIpProfile(
@@ -5227,8 +5233,8 @@ def add_wan_ip_profile(olt_id):
             ip_address=data.get('ip_address', ''),
             netmask=data.get('netmask', ''),
             gateway=data.get('gateway', ''),
-            dns1=data.get('dns1', ''),
-            dns2=data.get('dns2', ''),
+            dns1=dns1,
+            dns2=dns2,
         )
         db.session.add(profile)
         db.session.commit()

@@ -3690,30 +3690,36 @@ class TelnetCollector:
             except: pass
             return False, str(e)
 
-    def create_wan_ip_profile(self, name, ip_address='', netmask='', gateway='', dns1='', dns2=''):
-        """Create a WAN IP profile.
-        CLI: configure terminal > gpon > profile wan-ip <name> ipaddress <ip> netmask <mask> gateway <gw>
+    def create_wan_ip_profile(self, name, ip_address='', netmask='', gateway='', dns1='', dns2='', vlan='', priority=''):
+        """Create a WAN IP / VLAN profile on ZTE C320.
+        CLI: configure terminal > gpon > onu profile vlan <name> tag-mode tag cvlan <vlan> [priority <pri>]
         """
         tn = self._connect()
         if not tn: return False, 'Telnet connection failed'
         try:
-            tn.write('configure terminal\n')
-            tn.read_until(b'#', timeout=5)
-            tn.write('gpon\n')
-            tn.read_until(b'#', timeout=5)
-            cmd = f'profile wan-ip {name} ipaddress {ip_address} netmask {netmask} gateway {gateway}'
-            if dns1:
-                cmd += f' primary-dns {dns1}'
-            if dns2:
-                cmd += f' secondary-dns {dns2}'
-            tn.write(cmd + '\n')
-            out = tn.read_until(b'#', timeout=5).decode('utf-8', errors='replace')
-            tn.write('exit\n')
-            tn.read_until(b'#', timeout=5)
-            tn.write('exit\n')
-            tn.read_until(b'#', timeout=5)
-            tn.write('exit\n'); tn.close()
-            if 'Successful' in out or '[ok]' in out.lower():
+            if not vlan and dns1 and dns1.startswith('cvlan:'):
+                vlan = dns1.split(':', 1)[1]
+            if not priority and dns2 and dns2.startswith('pri:'):
+                priority = dns2.split(':', 1)[1]
+
+            self._send_command(tn, 'configure terminal', timeout=5)
+            self._send_command(tn, 'gpon', timeout=5)
+
+            vlan_val = vlan or '1000'
+            cmd = f'onu profile vlan {name} tag-mode tag cvlan {vlan_val}'
+            if priority:
+                cmd += f' priority {priority}'
+
+            out = self._send_command(tn, cmd, timeout=5)
+            if '%Error' in out or '%Code' in out or 'Unrecognized' in out:
+                cmd_legacy = f'profile wan-ip {name} ipaddress {ip_address} netmask {netmask} gateway {gateway}'
+                out = self._send_command(tn, cmd_legacy, timeout=5)
+
+            self._send_command(tn, 'exit', timeout=5)
+            self._send_command(tn, 'exit', timeout=5)
+            tn.write(b'exit\n'); tn.close()
+
+            if '%Error' not in out and '%Code' not in out and 'Unrecognized' not in out:
                 return True, f'WAN IP profile {name} created'
             return False, f'CLI error: {out.strip()[:100]}'
         except Exception as e:
@@ -3724,23 +3730,20 @@ class TelnetCollector:
 
     def delete_wan_ip_profile(self, name):
         """Delete a WAN IP profile.
-        CLI: configure terminal > gpon > no profile wan-ip <name>
+        CLI: configure terminal > gpon > no onu profile vlan <name>
         """
         tn = self._connect()
         if not tn: return False, 'Telnet connection failed'
         try:
-            tn.write('configure terminal\n')
-            tn.read_until(b'#', timeout=5)
-            tn.write('gpon\n')
-            tn.read_until(b'#', timeout=5)
-            tn.write(f'no profile wan-ip {name}\n')
-            out = tn.read_until(b'#', timeout=5).decode('utf-8', errors='replace')
-            tn.write('exit\n')
-            tn.read_until(b'#', timeout=5)
-            tn.write('exit\n')
-            tn.read_until(b'#', timeout=5)
-            tn.write('exit\n'); tn.close()
-            if 'Successful' in out or 'ok' in out.lower():
+            self._send_command(tn, 'configure terminal', timeout=5)
+            self._send_command(tn, 'gpon', timeout=5)
+            out = self._send_command(tn, f'no onu profile vlan {name}', timeout=5)
+            if '%Error' in out or 'Unrecognized' in out:
+                out = self._send_command(tn, f'no profile wan-ip {name}', timeout=5)
+            self._send_command(tn, 'exit', timeout=5)
+            self._send_command(tn, 'exit', timeout=5)
+            tn.write(b'exit\n'); tn.close()
+            if '%Error' not in out and '%Code' not in out and 'Unrecognized' not in out:
                 return True, f'WAN IP profile {name} deleted'
             return False, f'CLI error: {out.strip()[:100]}'
         except Exception as e:
