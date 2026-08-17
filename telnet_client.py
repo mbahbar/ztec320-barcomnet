@@ -1571,23 +1571,20 @@ class TelnetCollector:
                 else:
                     sc(f'service {service1_name} gemport 1 iphost 1 vlan {primary_vlan}')
                 service2_name = f'VLAN{secondary_vlan}'
-                sc(f'service {service2_name} gemport 2 vlan {secondary_vlan}')
+                if not use_veip and enable_tr069 and secondary_vlan:
+                    sc(f'service {service2_name} gemport 2 iphost 2 vlan {secondary_vlan}')
+                else:
+                    sc(f'service {service2_name} gemport 2 vlan {secondary_vlan}')
                 if use_veip:
                     sc('vlan port veip_1 mode hybrid')
                     sc('vlan port veip_1 vlan 1')
 
-                # PPPoE or DHCP mode (creates WAN connection)
+                # PPPoE or DHCP mode (creates WAN connection on host 1)
                 if enable_pppoe and pppoe_user and pppoe_pass:
                     sc(f'pppoe 1 nat enable user {pppoe_user} password {pppoe_pass}')
                 elif not use_veip:
                     sc('ip-host 1 dhcp-enable enable ping-response enable traceroute-response enable')
-
-                # WAN service AFTER pppoe so service type is not overridden
-                # Include tr069 in service type when TR069 is enabled so GenieACS can connect
-                if enable_tr069:
-                    sc('wan 1 service tr069 internet host 1')
-                else:
-                    sc('wan 1 service internet host 1')
+                sc('wan 1 service internet host 1')
 
                 # ETH port VLAN tagging — use lan_vlans if provided, else default to primary_vlan
                 lan_vlans_raw = extra.get('lan_vlans', '[]')
@@ -1608,20 +1605,25 @@ class TelnetCollector:
                 if not any(s.get('vlan') for s in ssids_list if s.get('name')):
                     sc_warn(f'vlan port wifi_0/1 mode tag vlan {primary_vlan}')  # 2.4GHz
                     sc_warn(f'vlan port wifi_0/5 mode tag vlan {primary_vlan}')  # 5GHz
-                    if enable_dual_ssid:
+                if secondary_vlan and len(ssids_list) > 1:
+                    # Multi-SSID guest on secondary VLAN
+                    if not ssids_list[1].get('vlan'):
                         sc_warn(f'vlan port wifi_0/2 mode tag vlan {secondary_vlan}')  # 2.4GHz guest
 
                 # Firewall
                 if enable_firewall:
                     sc(f'firewall enable level {firewall_level} anti-hack disable')
 
-                # TR069
+                # TR069 (Dual IP-Host DHCP mode on Host 2)
                 if enable_tr069:
+                    if not use_veip and secondary_vlan:
+                        sc('ip-host 2 dhcp-enable enable ping-response enable traceroute-response enable')
+                        sc('wan 2 service tr069 host 2')
                     sc('tr069-mgmt 1 state unlock')
                     sc(f'tr069-mgmt 1 acs {acs_url} validate basic username {acs_user} password {acs_pass}')
-                    tr069_vlan_mode = extra.get('tr069_vlan_mode', 'untag')
-                    if tr069_vlan_mode == 'tag' and tr069_vlan:
-                        sc(f'tr069-mgmt 1 tag pri 0 vlan {tr069_vlan}')
+                    effective_tr_vlan = tr069_vlan or secondary_vlan
+                    if effective_tr_vlan:
+                        sc(f'tr069-mgmt 1 tag pri 0 vlan {effective_tr_vlan}')
                     else:
                         sc('tr069-mgmt 1 untag')
 
