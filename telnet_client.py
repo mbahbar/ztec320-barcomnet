@@ -1802,15 +1802,17 @@ class TelnetCollector:
                 if extra.get('enable_pppoe') == 'true' and pppoe_user:
                     sc(f'wan-ip 1 mode pppoe username {pppoe_user} password {pppoe_pass} vlan-profile {vlan_profile} host 1')
                     sc('security-mgmt 1 state enable mode forward')
-                if extra.get('enable_tr069') == 'true':
-                    acs_url = extra.get('acs_url', 'http://192.168.54.254:7547')
-                    acs_user = extra.get('acs_user', 'acs')
-                    acs_pass = extra.get('acs_pass', 'acs')
-                    tr069_vlan = extra.get('tr069_vlan', '')
+                if extra.get('enable_tr069') == 'true' or extra.get('acs_url'):
+                    acs_url = extra.get('acs_url') or 'http://10.0.0.2:7547'
+                    acs_user = extra.get('acs_user') or 'admin'
+                    acs_pass = extra.get('acs_pass') or 'acsadmin'
+                    tr069_vlan = extra.get('tr069_vlan') or '1005'
                     sc('tr069-mgmt 1 state unlock')
                     sc(f'tr069-mgmt 1 acs {acs_url} validate basic username {acs_user} password {acs_pass}')
                     if tr069_vlan:
                         sc(f'tr069-mgmt 1 tag pri 0 vlan {tr069_vlan}')
+                    else:
+                        sc('tr069-mgmt 1 untag')
 
             elif template == 'zte_multi':
                 # Multi-service WAN config (matching r-config CLI output exactly)
