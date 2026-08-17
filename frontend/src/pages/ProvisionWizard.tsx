@@ -344,6 +344,7 @@ export function ProvisionWizard({ manualMode = false }: { manualMode?: boolean }
   const detectedVendor = useMemo(() => {
     if (data.selectedOnus.length === 0) return 'unknown';
     const sn = data.selectedOnus[0].sn.toUpperCase();
+    if (sn.startsWith('ZTEG') || sn.startsWith('ZICG')) return 'zte';
     if (sn.startsWith('HWTC')) return 'huawei';
     if (sn.startsWith('ALCL') || sn.startsWith('NKIA')) return 'nokia';
     if (sn.startsWith('FHTT')) return 'fiberhome';
