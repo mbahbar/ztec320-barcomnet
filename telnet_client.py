@@ -1618,7 +1618,7 @@ class TelnetCollector:
                 if enable_tr069:
                     if not use_veip and secondary_vlan:
                         sc('ip-host 2 dhcp-enable enable ping-response enable traceroute-response enable')
-                        sc('wan 2 service tr069 host 2')
+                        sc('wan 2 service tr069')
                     sc('tr069-mgmt 1 state unlock')
                     sc(f'tr069-mgmt 1 acs {acs_url} validate basic username {acs_user} password {acs_pass}')
                     effective_tr_vlan = tr069_vlan or secondary_vlan
