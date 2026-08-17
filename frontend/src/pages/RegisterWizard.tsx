@@ -1079,61 +1079,58 @@ export function RegisterWizard() {
                 <div className="flex items-center justify-between mb-2">
                   <label className="label-sm">VLAN List</label>
                   <button type="button" onClick={() => {
-                    const cur = Array.isArray(data.extra.vlans) ? data.extra.vlans : [];
-                    update('extra', { ...data.extra, vlans: [...cur, { vlan: '', label: '' }] });
+                    const base = Array.isArray(data.extra.vlans) ? data.extra.vlans : [
+                      { vlan: data.extra.primary_vlan || '1006', label: 'Internet' },
+                      { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
+                    ];
+                    update('extra', { ...data.extra, vlans: [...base, { vlan: '', label: '' }] });
                   }} className="px-2 py-1 text-xs rounded bg-accent/15 text-accent hover:bg-accent/25 transition-colors flex items-center gap-1">
                     <Plus size={12} /> Add VLAN
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {(Array.isArray(data.extra.vlans) && data.extra.vlans.length > 0 ? data.extra.vlans : [
-                    { vlan: data.extra.primary_vlan || '1006', label: 'Internet' },
-                    { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
-                  ]).map((v, i) => (
-                    <div key={i} className="flex gap-2 items-center">
-                      <span className="text-[10px] text-tx3 w-6 flex-shrink-0">#{i + 1}</span>
-                      {vlanList.length > 0 ? (
-                        <select value={v.vlan || ''} onChange={e => {
-                          const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                            { vlan: data.extra.primary_vlan || '1006', label: 'Internet' },
-                            { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
-                          ];
-                          cur[i] = { ...cur[i], vlan: e.target.value };
-                          update('extra', { ...data.extra, vlans: cur });
-                        }} className="input-field flex-1">
-                          <option value="">Select VLAN...</option>
-                          {vlanList.map(v => <option key={v.vlan_id} value={v.vlan_id}>{v.vlan_id} — {v.name || '(unnamed)'}</option>)}
-                        </select>
-                      ) : (
-                        <input type="number" value={v.vlan || ''} placeholder="VLAN ID"
-                          onChange={e => {
-                            const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                              { vlan: data.extra.primary_vlan || '1006', label: 'Internet' },
-                              { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
-                            ];
+                  {(() => {
+                    const baseVlans = Array.isArray(data.extra.vlans) ? data.extra.vlans : [
+                      { vlan: data.extra.primary_vlan || '1006', label: 'Internet' },
+                      { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
+                    ];
+                    return baseVlans.map((v, i) => (
+                      <div key={i} className="flex gap-2 items-center">
+                        <span className="text-[10px] text-tx3 w-6 flex-shrink-0">#{i + 1}</span>
+                        {vlanList.length > 0 ? (
+                          <select value={v.vlan || ''} onChange={e => {
+                            const cur = [...baseVlans];
                             cur[i] = { ...cur[i], vlan: e.target.value };
                             update('extra', { ...data.extra, vlans: cur });
+                          }} className="input-field flex-1">
+                            <option value="">Select VLAN...</option>
+                            {vlanList.map(vl => <option key={vl.vlan_id} value={vl.vlan_id}>{vl.vlan_id} — {vl.name || '(unnamed)'}</option>)}
+                          </select>
+                        ) : (
+                          <input type="number" value={v.vlan || ''} placeholder="VLAN ID"
+                            onChange={e => {
+                              const cur = [...baseVlans];
+                              cur[i] = { ...cur[i], vlan: e.target.value };
+                              update('extra', { ...data.extra, vlans: cur });
+                            }}
+                            className="input-field flex-1" min={1} max={4094} />
+                        )}
+                        <input type="text" value={v.label || ''} placeholder="Label (opt)"
+                          onChange={e => {
+                            const cur = [...baseVlans];
+                            cur[i] = { ...cur[i], label: e.target.value };
+                            update('extra', { ...data.extra, vlans: cur });
                           }}
-                          className="input-field flex-1" min={1} max={4094} />
-                      )}
-                      <input type="text" value={v.label || ''} placeholder="Label (opt)"
-                        onChange={e => {
-                          const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                            { vlan: data.extra.primary_vlan || '1006', label: 'Internet' },
-                            { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
-                          ];
-                          cur[i] = { ...cur[i], label: e.target.value };
+                          className="input-field flex-1" />
+                        <button type="button" onClick={() => {
+                          const cur = baseVlans.filter((_, idx) => idx !== i);
                           update('extra', { ...data.extra, vlans: cur });
-                        }}
-                        className="input-field flex-1" />
-                      <button type="button" onClick={() => {
-                        const cur = Array.isArray(data.extra.vlans) ? data.extra.vlans.filter((_, idx) => idx !== i) : [];
-                        update('extra', { ...data.extra, vlans: cur });
-                      }} className="p-1.5 rounded text-danger hover:bg-danger/10 flex-shrink-0">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
+                        }} className="p-1.5 rounded text-danger hover:bg-danger/10 flex-shrink-0">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ));
+                  })()}
                 </div>
                 <p className="text-[10px] text-tx3 mt-1">VLAN pertama = Primary (Internet), kedua = Secondary (Voucher). Tambah VLAN lain sesuai kebutuhan.</p>
               </div>
@@ -1634,65 +1631,58 @@ export function RegisterWizard() {
                 <div className="flex items-center justify-between mb-2">
                   <label className="label-sm">VLAN List (Service Ports)</label>
                   <button type="button" onClick={() => {
-                    const cur = Array.isArray(data.extra.vlans) ? data.extra.vlans : [];
-                    update('extra', { ...data.extra, vlans: [...cur, { vlan: '', label: '' }] });
+                    const base = Array.isArray(data.extra.vlans) ? data.extra.vlans : [
+                      { vlan: data.extra.mgmt_vlan || '1005', label: 'Mgmt' },
+                      { vlan: data.extra.internet_vlan || '1006', label: 'Internet' },
+                    ];
+                    update('extra', { ...data.extra, vlans: [...base, { vlan: '', label: '' }] });
                   }} className="px-2 py-1 text-xs rounded bg-accent/15 text-accent hover:bg-accent/25 transition-colors flex items-center gap-1">
                     <Plus size={12} /> Add VLAN
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {(Array.isArray(data.extra.vlans) && data.extra.vlans.length > 0 ? data.extra.vlans : [
-                    { vlan: data.extra.mgmt_vlan || '1010', label: 'Mgmt' },
-                    { vlan: data.extra.internet_vlan || '30', label: 'Internet' },
-                    { vlan: data.extra.voip_vlan || '151', label: 'VoIP' },
-                  ]).map((v, i) => (
-                    <div key={i} className="flex gap-2 items-center">
-                      <span className="text-[10px] text-tx3 w-6 flex-shrink-0">#{i + 1}</span>
-                      {vlanList.length > 0 ? (
-                        <select value={v.vlan || ''} onChange={e => {
-                          const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                            { vlan: data.extra.mgmt_vlan || '1010', label: 'Mgmt' },
-                            { vlan: data.extra.internet_vlan || '30', label: 'Internet' },
-                            { vlan: data.extra.voip_vlan || '151', label: 'VoIP' },
-                          ];
-                          cur[i] = { ...cur[i], vlan: e.target.value };
-                          update('extra', { ...data.extra, vlans: cur });
-                        }} className="input-field flex-1">
-                          <option value="">Select VLAN...</option>
-                          {vlanList.map(v => <option key={v.vlan_id} value={v.vlan_id}>{v.vlan_id} — {v.name || '(unnamed)'}</option>)}
-                        </select>
-                      ) : (
-                        <input type="number" value={v.vlan || ''} placeholder="VLAN ID"
-                          onChange={e => {
-                            const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                              { vlan: data.extra.mgmt_vlan || '1010', label: 'Mgmt' },
-                              { vlan: data.extra.internet_vlan || '30', label: 'Internet' },
-                              { vlan: data.extra.voip_vlan || '151', label: 'VoIP' },
-                            ];
+                  {(() => {
+                    const baseVlans = Array.isArray(data.extra.vlans) ? data.extra.vlans : [
+                      { vlan: data.extra.mgmt_vlan || '1005', label: 'Mgmt' },
+                      { vlan: data.extra.internet_vlan || '1006', label: 'Internet' },
+                    ];
+                    return baseVlans.map((v, i) => (
+                      <div key={i} className="flex gap-2 items-center">
+                        <span className="text-[10px] text-tx3 w-6 flex-shrink-0">#{i + 1}</span>
+                        {vlanList.length > 0 ? (
+                          <select value={v.vlan || ''} onChange={e => {
+                            const cur = [...baseVlans];
                             cur[i] = { ...cur[i], vlan: e.target.value };
                             update('extra', { ...data.extra, vlans: cur });
+                          }} className="input-field flex-1">
+                            <option value="">Select VLAN...</option>
+                            {vlanList.map(vl => <option key={vl.vlan_id} value={vl.vlan_id}>{vl.vlan_id} — {vl.name || '(unnamed)'}</option>)}
+                          </select>
+                        ) : (
+                          <input type="number" value={v.vlan || ''} placeholder="VLAN ID"
+                            onChange={e => {
+                              const cur = [...baseVlans];
+                              cur[i] = { ...cur[i], vlan: e.target.value };
+                              update('extra', { ...data.extra, vlans: cur });
+                            }}
+                            className="input-field flex-1" min={1} max={4094} />
+                        )}
+                        <input type="text" value={v.label || ''} placeholder="Label (opt)"
+                          onChange={e => {
+                            const cur = [...baseVlans];
+                            cur[i] = { ...cur[i], label: e.target.value };
+                            update('extra', { ...data.extra, vlans: cur });
                           }}
-                          className="input-field flex-1" min={1} max={4094} />
-                      )}
-                      <input type="text" value={v.label || ''} placeholder="Label (opt)"
-                        onChange={e => {
-                          const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                            { vlan: data.extra.mgmt_vlan || '1010', label: 'Mgmt' },
-                            { vlan: data.extra.internet_vlan || '30', label: 'Internet' },
-                            { vlan: data.extra.voip_vlan || '151', label: 'VoIP' },
-                          ];
-                          cur[i] = { ...cur[i], label: e.target.value };
+                          className="input-field flex-1" />
+                        <button type="button" onClick={() => {
+                          const cur = baseVlans.filter((_, idx) => idx !== i);
                           update('extra', { ...data.extra, vlans: cur });
-                        }}
-                        className="input-field flex-1" />
-                      <button type="button" onClick={() => {
-                        const cur = Array.isArray(data.extra.vlans) ? data.extra.vlans.filter((_, idx) => idx !== i) : [];
-                        update('extra', { ...data.extra, vlans: cur });
-                      }} className="p-1.5 rounded text-danger hover:bg-danger/10 flex-shrink-0">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
+                        }} className="p-1.5 rounded text-danger hover:bg-danger/10 flex-shrink-0">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ));
+                  })()}
                 </div>
                 <p className="text-[10px] text-tx3 mt-1">Setiap VLAN akan dibuatkan service-port pada ONU. Jumlah VLAN fleksibel sesuai kebutuhan tenant.</p>
               </div>
@@ -1745,65 +1735,58 @@ export function RegisterWizard() {
                 <div className="flex items-center justify-between mb-2">
                   <label className="label-sm">VLAN List (Service Ports)</label>
                   <button type="button" onClick={() => {
-                    const cur = Array.isArray(data.extra.vlans) ? data.extra.vlans : [];
-                    update('extra', { ...data.extra, vlans: [...cur, { vlan: '', label: '' }] });
+                    const base = Array.isArray(data.extra.vlans) ? data.extra.vlans : [
+                      { vlan: data.extra.tr069_vlan || '1005', label: 'TR069' },
+                      { vlan: data.extra.internet_vlan || '1006', label: 'Internet' },
+                    ];
+                    update('extra', { ...data.extra, vlans: [...base, { vlan: '', label: '' }] });
                   }} className="px-2 py-1 text-xs rounded bg-accent/15 text-accent hover:bg-accent/25 transition-colors flex items-center gap-1">
                     <Plus size={12} /> Add VLAN
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {(Array.isArray(data.extra.vlans) && data.extra.vlans.length > 0 ? data.extra.vlans : [
-                    { vlan: data.extra.tr069_vlan || '1010', label: 'TR069' },
-                    { vlan: data.extra.internet_vlan || '30', label: 'Internet' },
-                    { vlan: data.extra.voip_vlan || '151', label: 'VoIP' },
-                  ]).map((v, i) => (
-                    <div key={i} className="flex gap-2 items-center">
-                      <span className="text-[10px] text-tx3 w-6 flex-shrink-0">#{i + 1}</span>
-                      {vlanList.length > 0 ? (
-                        <select value={v.vlan || ''} onChange={e => {
-                          const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                            { vlan: data.extra.tr069_vlan || '1010', label: 'TR069' },
-                            { vlan: data.extra.internet_vlan || '30', label: 'Internet' },
-                            { vlan: data.extra.voip_vlan || '151', label: 'VoIP' },
-                          ];
-                          cur[i] = { ...cur[i], vlan: e.target.value };
-                          update('extra', { ...data.extra, vlans: cur });
-                        }} className="input-field flex-1">
-                          <option value="">Select VLAN...</option>
-                          {vlanList.map(v => <option key={v.vlan_id} value={v.vlan_id}>{v.vlan_id} — {v.name || '(unnamed)'}</option>)}
-                        </select>
-                      ) : (
-                        <input type="number" value={v.vlan || ''} placeholder="VLAN ID"
-                          onChange={e => {
-                            const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                              { vlan: data.extra.tr069_vlan || '1010', label: 'TR069' },
-                              { vlan: data.extra.internet_vlan || '30', label: 'Internet' },
-                              { vlan: data.extra.voip_vlan || '151', label: 'VoIP' },
-                            ];
+                  {(() => {
+                    const baseVlans = Array.isArray(data.extra.vlans) ? data.extra.vlans : [
+                      { vlan: data.extra.tr069_vlan || '1005', label: 'TR069' },
+                      { vlan: data.extra.internet_vlan || '1006', label: 'Internet' },
+                    ];
+                    return baseVlans.map((v, i) => (
+                      <div key={i} className="flex gap-2 items-center">
+                        <span className="text-[10px] text-tx3 w-6 flex-shrink-0">#{i + 1}</span>
+                        {vlanList.length > 0 ? (
+                          <select value={v.vlan || ''} onChange={e => {
+                            const cur = [...baseVlans];
                             cur[i] = { ...cur[i], vlan: e.target.value };
                             update('extra', { ...data.extra, vlans: cur });
+                          }} className="input-field flex-1">
+                            <option value="">Select VLAN...</option>
+                            {vlanList.map(vl => <option key={vl.vlan_id} value={vl.vlan_id}>{vl.vlan_id} — {vl.name || '(unnamed)'}</option>)}
+                          </select>
+                        ) : (
+                          <input type="number" value={v.vlan || ''} placeholder="VLAN ID"
+                            onChange={e => {
+                              const cur = [...baseVlans];
+                              cur[i] = { ...cur[i], vlan: e.target.value };
+                              update('extra', { ...data.extra, vlans: cur });
+                            }}
+                            className="input-field flex-1" min={1} max={4094} />
+                        )}
+                        <input type="text" value={v.label || ''} placeholder="Label (opt)"
+                          onChange={e => {
+                            const cur = [...baseVlans];
+                            cur[i] = { ...cur[i], label: e.target.value };
+                            update('extra', { ...data.extra, vlans: cur });
                           }}
-                          className="input-field flex-1" min={1} max={4094} />
-                      )}
-                      <input type="text" value={v.label || ''} placeholder="Label (opt)"
-                        onChange={e => {
-                          const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                            { vlan: data.extra.tr069_vlan || '1010', label: 'TR069' },
-                            { vlan: data.extra.internet_vlan || '30', label: 'Internet' },
-                            { vlan: data.extra.voip_vlan || '151', label: 'VoIP' },
-                          ];
-                          cur[i] = { ...cur[i], label: e.target.value };
+                          className="input-field flex-1" />
+                        <button type="button" onClick={() => {
+                          const cur = baseVlans.filter((_, idx) => idx !== i);
                           update('extra', { ...data.extra, vlans: cur });
-                        }}
-                        className="input-field flex-1" />
-                      <button type="button" onClick={() => {
-                        const cur = Array.isArray(data.extra.vlans) ? data.extra.vlans.filter((_, idx) => idx !== i) : [];
-                        update('extra', { ...data.extra, vlans: cur });
-                      }} className="p-1.5 rounded text-danger hover:bg-danger/10 flex-shrink-0">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
+                        }} className="p-1.5 rounded text-danger hover:bg-danger/10 flex-shrink-0">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ));
+                  })()}
                 </div>
                 <p className="text-[10px] text-tx3 mt-1">Default: #1=TR069, #2=Internet. Tambah/hapus VLAN sesuai kebutuhan.</p>
               </div>
@@ -1940,61 +1923,58 @@ export function RegisterWizard() {
                 <div className="flex items-center justify-between mb-2">
                   <label className="label-sm">VLAN List (Service Ports)</label>
                   <button type="button" onClick={() => {
-                    const cur = Array.isArray(data.extra.vlans) ? data.extra.vlans : [];
-                    update('extra', { ...data.extra, vlans: [...cur, { vlan: '', label: '' }] });
+                    const base = Array.isArray(data.extra.vlans) ? data.extra.vlans : [
+                      { vlan: data.extra.primary_vlan || String(data.vlan || '1006'), label: 'Internet' },
+                      { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
+                    ];
+                    update('extra', { ...data.extra, vlans: [...base, { vlan: '', label: '' }] });
                   }} className="px-2 py-1 text-xs rounded bg-accent/15 text-accent hover:bg-accent/25 transition-colors flex items-center gap-1">
                     <Plus size={12} /> Add VLAN
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {(Array.isArray(data.extra.vlans) && data.extra.vlans.length > 0 ? data.extra.vlans : [
-                    { vlan: data.extra.primary_vlan || String(data.vlan || '1006'), label: 'Internet' },
-                    { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
-                  ]).map((v, i) => (
-                    <div key={i} className="flex gap-2 items-center">
-                      <span className="text-[10px] text-tx3 w-6 flex-shrink-0">#{i + 1}</span>
-                      {vlanList.length > 0 ? (
-                        <select value={v.vlan || ''} onChange={e => {
-                          const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                            { vlan: data.extra.primary_vlan || String(data.vlan || '1006'), label: 'Internet' },
-                            { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
-                          ];
-                          cur[i] = { ...cur[i], vlan: e.target.value };
-                          update('extra', { ...data.extra, vlans: cur });
-                        }} className="input-field flex-1">
-                          <option value="">Select VLAN...</option>
-                          {vlanList.map(vl => <option key={vl.vlan_id} value={vl.vlan_id}>{vl.vlan_id} — {vl.name || '(unnamed)'}</option>)}
-                        </select>
-                      ) : (
-                        <input type="number" value={v.vlan || ''} placeholder="VLAN ID"
-                          onChange={e => {
-                            const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                              { vlan: data.extra.primary_vlan || String(data.vlan || '1006'), label: 'Internet' },
-                              { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
-                            ];
+                  {(() => {
+                    const baseVlans = Array.isArray(data.extra.vlans) ? data.extra.vlans : [
+                      { vlan: data.extra.primary_vlan || String(data.vlan || '1006'), label: 'Internet' },
+                      { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
+                    ];
+                    return baseVlans.map((v, i) => (
+                      <div key={i} className="flex gap-2 items-center">
+                        <span className="text-[10px] text-tx3 w-6 flex-shrink-0">#{i + 1}</span>
+                        {vlanList.length > 0 ? (
+                          <select value={v.vlan || ''} onChange={e => {
+                            const cur = [...baseVlans];
                             cur[i] = { ...cur[i], vlan: e.target.value };
                             update('extra', { ...data.extra, vlans: cur });
+                          }} className="input-field flex-1">
+                            <option value="">Select VLAN...</option>
+                            {vlanList.map(vl => <option key={vl.vlan_id} value={vl.vlan_id}>{vl.vlan_id} — {vl.name || '(unnamed)'}</option>)}
+                          </select>
+                        ) : (
+                          <input type="number" value={v.vlan || ''} placeholder="VLAN ID"
+                            onChange={e => {
+                              const cur = [...baseVlans];
+                              cur[i] = { ...cur[i], vlan: e.target.value };
+                              update('extra', { ...data.extra, vlans: cur });
+                            }}
+                            className="input-field flex-1" min={1} max={4094} />
+                        )}
+                        <input type="text" value={v.label || ''} placeholder="Label (opt)"
+                          onChange={e => {
+                            const cur = [...baseVlans];
+                            cur[i] = { ...cur[i], label: e.target.value };
+                            update('extra', { ...data.extra, vlans: cur });
                           }}
-                          className="input-field flex-1" min={1} max={4094} />
-                      )}
-                      <input type="text" value={v.label || ''} placeholder="Label (opt)"
-                        onChange={e => {
-                          const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                            { vlan: data.extra.primary_vlan || String(data.vlan || '1006'), label: 'Internet' },
-                            { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
-                          ];
-                          cur[i] = { ...cur[i], label: e.target.value };
+                          className="input-field flex-1" />
+                        <button type="button" onClick={() => {
+                          const cur = baseVlans.filter((_, idx) => idx !== i);
                           update('extra', { ...data.extra, vlans: cur });
-                        }}
-                        className="input-field flex-1" />
-                      <button type="button" onClick={() => {
-                        const cur = Array.isArray(data.extra.vlans) ? data.extra.vlans.filter((_, idx) => idx !== i) : [];
-                        update('extra', { ...data.extra, vlans: cur });
-                      }} className="p-1.5 rounded text-danger hover:bg-danger/10 flex-shrink-0">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  ))}
+                        }} className="p-1.5 rounded text-danger hover:bg-danger/10 flex-shrink-0">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ));
+                  })()}
                 </div>
                 <p className="text-[10px] text-tx3 mt-1">Default: #1=Internet, #2=TR069. Tambah/hapus VLAN sesuai kebutuhan.</p>
               </div>
