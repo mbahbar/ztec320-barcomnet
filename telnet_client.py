@@ -3338,56 +3338,21 @@ class TelnetCollector:
             return False, str(e)
 
     def set_vlan_trunk(self, port_name, vlan_ids, mode='trunk'):
-        """Set VLAN trunk configuration on a port.
-        CLI syntax (ZTE C320):
-          switchport mode trunk|access|hybrid
-          switchport vlan <IDs> tag    — add VLANs (comma-separated)
-          no switchport vlan <IDs>     — remove VLANs
-        This method removes all current VLANs then adds the specified ones.
-        """
+        """Set VLAN trunk configuration on a port."""
         tn = self._connect()
         if not tn: return False, 'Telnet connection failed'
         try:
-            tn.write('configure terminal\n')
-            tn.read_until(b'#', timeout=5)
-            tn.write(f'interface {port_name}\n')
-            tn.read_until(b'#', timeout=5)
-
-            # Set mode
-            tn.write(f'switchport mode {mode}\n')
-            tn.read_until(b'#', timeout=5)
-
-            # Get current VLANs to remove them
-            tn.write('show running-config\n')
-            cfg = tn.read_until(b'#', timeout=10).decode('utf-8', errors='replace')
-            current_vlans = []
-            for line in cfg.split('\n'):
-                line = line.strip()
-                if line.startswith('switchport vlan ') and 'tag' in line:
-                    v_part = line.replace('switchport vlan ', '').replace(' tag', '').strip()
-                    for v in v_part.split(','):
-                        v = v.strip()
-                        if v.isdigit():
-                            current_vlans.append(v)
-
-            # Remove current VLANs
-            if current_vlans:
-                tn.write(f'no switchport vlan {",".join(current_vlans)}\n')
-                tn.read_until(b'#', timeout=5)
-
-            # Add new VLANs
+            self._send_command(tn, 'end')
+            self._send_command(tn, 'configure terminal')
+            self._send_command(tn, f'interface {port_name}')
+            self._send_command(tn, f'switchport mode {mode}')
             if vlan_ids:
                 vlans_str = ','.join(vlan_ids)
-                tn.write(f'switchport vlan {vlans_str} tag\n')
-                tn.read_until(b'#', timeout=5)
-
-            tn.write('exit\n')
-            tn.read_until(b'#', timeout=5)
-            tn.write('exit\n')
-            tn.read_until(b'#', timeout=5)
-            tn.write('exit\n')
+                self._send_command(tn, f'switchport vlan {vlans_str} tag')
+            self._send_command(tn, 'exit')
+            self._send_command(tn, 'end')
             tn.close()
-            return True, f'Port {port_name} VLAN trunk updated: {",".join(vlan_ids) if vlan_ids else "none"}'
+            return True, f'Port {port_name} VLAN trunk updated'
         except Exception as e:
             logger.error(f"set_vlan_trunk {port_name} failed: {e}")
             try: tn.close()
