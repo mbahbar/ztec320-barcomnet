@@ -1647,11 +1647,18 @@ class TelnetCollector:
                 if traffic_profile:
                     sc(f'gemport 1 traffic-limit downstream {traffic_profile}')
                 sc(f'service-port 1 vport 1 user-vlan {vlan} vlan {vlan}')
+                if enable_tr069 and tr069_vlan and int(tr069_vlan) != int(vlan):
+                    sc(f'tcont 2 name VLAN{tr069_vlan} profile {tcont_profile}')
+                    sc('gemport 2 tcont 2')
+                    sc(f'service-port 2 vport 2 user-vlan {tr069_vlan} vlan {tr069_vlan}')
+                    sc(f'service-port 2 description TR069-Mgmt')
                 self._send_command(tn, 'exit')
                 self._send_command(tn, f'pon-onu-mng {onu_if}')
                 # Safe-replace: delete old service entries to prevent error 63869
                 self._send_command(tn, 'no service INTERNET', timeout=10)
                 self._send_command(tn, 'no service service1', timeout=10)
+                self._send_command(tn, 'no service service2', timeout=10)
+                self._send_command(tn, 'no service TR069', timeout=10)
                 self._send_command(tn, 'no wan 1 service', timeout=10)
                 self._send_command(tn, 'no wan-ip 1', timeout=10)
                 self._send_command(tn, 'no pppoe 1', timeout=10)
@@ -1663,6 +1670,8 @@ class TelnetCollector:
                     sc('vlan port veip_1 vlan 1')
                 else:
                     sc(f'service INTERNET gemport 1 iphost 1 vlan {vlan}')
+                if enable_tr069 and tr069_vlan and int(tr069_vlan) != int(vlan):
+                    sc(f'service TR069 gemport 2 vlan {tr069_vlan}')
 
                 # PPPoE first (creates WAN connection)
                 if enable_pppoe and pppoe_user and pppoe_pass:

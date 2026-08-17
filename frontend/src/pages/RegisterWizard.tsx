@@ -95,6 +95,12 @@ function generateRegisterScript(d: WizardData): string {
     lines.push('  gemport 1 tcont 1');
     if (d.trafficProfile) lines.push(`  gemport 1 traffic-limit downstream ${d.trafficProfile}`);
     lines.push(`  service-port 1 vport 1 user-vlan ${vlan} vlan ${vlan}`);
+    const enableTr069 = e.enable_tr069 === 'true';
+    if (enableTr069 && e.tr069_vlan && String(e.tr069_vlan) !== String(vlan)) {
+      lines.push(`  tcont 2 name VLAN${e.tr069_vlan} profile ${d.tcontProfile}`);
+      lines.push('  gemport 2 tcont 2');
+      lines.push(`  service-port 2 vport 2 user-vlan ${e.tr069_vlan} vlan ${e.tr069_vlan}`);
+    }
     lines.push('!');
     lines.push(`pon-onu-mng ${onuIf}`);
     const useVeip = eWithVeip.use_veip === 'true';
@@ -105,7 +111,9 @@ function generateRegisterScript(d: WizardData): string {
     } else {
       lines.push(`  service INTERNET gemport 1 iphost 1 vlan ${vlan}`);
     }
-    const enableTr069 = e.enable_tr069 === 'true';
+    if (enableTr069 && e.tr069_vlan && String(e.tr069_vlan) !== String(vlan)) {
+      lines.push(`  service TR069 gemport 2 vlan ${e.tr069_vlan}`);
+    }
     if (enableTr069) lines.push('  wan 1 service tr069 internet host 1');
     else lines.push('  wan 1 service internet host 1');
     if (e.enable_pppoe === 'true' && e.pppoe_user) lines.push(`  pppoe 1 nat enable user ${e.pppoe_user} password ${e.pppoe_pass}`);
@@ -117,8 +125,9 @@ function generateRegisterScript(d: WizardData): string {
     if (e.enable_firewall === 'true') lines.push(`  firewall enable level ${e.firewall_level || 'low'} anti-hack disable`);
     if (enableTr069) {
       lines.push('  tr069-mgmt 1 state unlock');
-      lines.push(`  tr069-mgmt 1 acs ${e.acs_url || 'http://192.168.54.254:7547'} validate basic username ${e.acs_user || 'acs'} password ${e.acs_pass || 'acs'}`);
-      if (e.tr069_vlan_mode === 'tag' && e.tr069_vlan) lines.push(`  tr069-mgmt 1 tag pri 0 vlan ${e.tr069_vlan}`);
+      lines.push(`  tr069-mgmt 1 acs ${e.acs_url || 'http://10.0.0.2:7547'} validate basic username ${e.acs_user || 'admin'} password ${e.acs_pass || 'admin'}`);
+      if (e.tr069_vlan) lines.push(`  tr069-mgmt 1 tag pri 0 vlan ${e.tr069_vlan}`);
+      else lines.push('  tr069-mgmt 1 untag');
     }
     lines.push('  security-mgmt 1 state enable mode forward protocol web ftp telnet ssh https snmp tr069');
   } else if (d.template === 'zte_full') {
