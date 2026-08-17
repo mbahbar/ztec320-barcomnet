@@ -1402,11 +1402,24 @@ class TelnetCollector:
                 self._send_command(tn, 'end'); tn.close()
                 return True, f'ONU {frame}/{slot}/{port}:{onu_id} registered (config skipped)'
 
-            # Helper: send command with error tracking
+            # Helper: send command with error tracking & auto-recovery for missing VLAN profiles
             last_err = None
             def sc(cmd):
                 nonlocal last_err
                 out, err = self._send_cmd_check(tn, cmd, timeout=10)
+                if err and ('Profile does not exist' in err or '63981' in err) and 'vlan-profile' in cmd:
+                    vp_match = re.search(r'vlan-profile\s+(\S+)', cmd)
+                    vp_name = vp_match.group(1) if vp_match else None
+                    if vp_name:
+                        logger.info(f"[register_vendor_template] vlan-profile '{vp_name}' missing on OLT, auto-creating...")
+                        v_match = re.search(r'PPPoE-(\d+)', vp_name)
+                        cvlan = v_match.group(1) if v_match else str(vlan)
+                        self._send_command(tn, 'exit')
+                        self._send_command(tn, 'gpon')
+                        self._send_cmd_check(tn, f'onu profile vlan {vp_name} tag-mode tag cvlan {cvlan}')
+                        self._send_command(tn, 'exit')
+                        self._send_command(tn, f'pon-onu-mng {onu_if}')
+                        out, err = self._send_cmd_check(tn, cmd, timeout=10)
                 if err:
                     logger.warning(f"[register_vendor_template] CMD FAILED: '{cmd}' -> {err}")
                     last_err = err
@@ -2089,6 +2102,19 @@ class TelnetCollector:
             def sc(cmd):
                 nonlocal last_err
                 out, err = self._send_cmd_check(tn, cmd, timeout=10)
+                if err and ('Profile does not exist' in err or '63981' in err) and 'vlan-profile' in cmd:
+                    vp_match = re.search(r'vlan-profile\s+(\S+)', cmd)
+                    vp_name = vp_match.group(1) if vp_match else None
+                    if vp_name:
+                        logger.info(f"[register_unified] vlan-profile '{vp_name}' missing on OLT, auto-creating...")
+                        v_match = re.search(r'PPPoE-(\d+)', vp_name)
+                        cvlan = v_match.group(1) if v_match else '1006'
+                        self._send_command(tn, 'exit')
+                        self._send_command(tn, 'gpon')
+                        self._send_cmd_check(tn, f'onu profile vlan {vp_name} tag-mode tag cvlan {cvlan}')
+                        self._send_command(tn, 'exit')
+                        self._send_command(tn, f'pon-onu-mng {onu_if}')
+                        out, err = self._send_cmd_check(tn, cmd, timeout=10)
                 if err:
                     logger.warning(f"[register_unified] CMD FAIL: '{cmd}' -> {err}")
                     last_err = err
