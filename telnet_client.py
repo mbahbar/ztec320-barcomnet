@@ -1797,14 +1797,21 @@ class TelnetCollector:
                     sc(f'service Service{idx} gemport {idx} vlan {vid}')
                 sc('vlan port veip_1 mode hybrid')
                 sc('vlan port veip_1 vlan 1')
-                internet_vlan = str(vlan or 1006)
+                internet_vlan = '1006'
+                for v in vlans_raw:
+                    if isinstance(v, dict):
+                        lbl = (v.get('label') or '').lower()
+                        if 'internet' in lbl:
+                            internet_vlan = str(v.get('vlan', internet_vlan))
+                if internet_vlan == '1006' and vlan and str(vlan) != '100':
+                    internet_vlan = str(vlan)
                 for eth_port in range(1, 5):
                     sc(f'vlan port eth_0/{eth_port} mode tag vlan {internet_vlan}')
                 sc_warn(f'vlan port wifi_0/1 mode tag vlan {internet_vlan}')
                 sc_warn(f'vlan port wifi_0/5 mode tag vlan {internet_vlan}')
                 pppoe_user = extra.get('pppoe_user', '')
                 pppoe_pass = extra.get('pppoe_pass', '')
-                vlan_profile = extra.get('vlan_profile', f'PPPoE-{vlan}')
+                vlan_profile = extra.get('vlan_profile', f'PPPoE-{internet_vlan}')
                 if extra.get('enable_pppoe') == 'true' and pppoe_user:
                     sc(f'wan-ip 1 mode pppoe username {pppoe_user} password {pppoe_pass} vlan-profile {vlan_profile} host 1')
                     sc('security-mgmt 1 state enable mode forward')
@@ -1812,7 +1819,14 @@ class TelnetCollector:
                     acs_url = extra.get('acs_url') or 'http://10.0.0.2:7547'
                     acs_user = extra.get('acs_user') or 'admin'
                     acs_pass = extra.get('acs_pass') or 'acsadmin'
-                    tr069_vlan = extra.get('tr069_vlan') or '20'
+                    tr069_vlan = extra.get('tr069_vlan') or ''
+                    if not tr069_vlan:
+                        for v in vlans_raw:
+                            if isinstance(v, dict):
+                                lbl = (v.get('label') or '').lower()
+                                if 'tr069' in lbl or 'mgmt' in lbl:
+                                    tr069_vlan = str(v.get('vlan', tr069_vlan))
+                    tr069_vlan = tr069_vlan or '20'
                     sc('tr069-mgmt 1 state unlock')
                     sc(f'tr069-mgmt 1 acs {acs_url} validate basic username {acs_user} password {acs_pass}')
                     if tr069_vlan:
