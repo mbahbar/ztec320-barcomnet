@@ -139,8 +139,8 @@ def save_sync_result(olt, result, sync, light=False):
                 if pname not in seen_uplink_names:
                     db.session.delete(u)
 
-        vlans = result.get('vlans', [])
-        if vlans is not None:
+        vlans = result.get('vlans')
+        if vlans:
             ONUVlan.query.filter_by(olt_id=olt.id).delete()
             for v in vlans:
                 vlan = ONUVlan(olt_id=olt.id, vlan_id=v['vlan_id'],
@@ -151,8 +151,8 @@ def save_sync_result(olt, result, sync, light=False):
                                untagged_ports=v.get('untagged_ports', ''))
                 db.session.add(vlan)
 
-        onu_types = result.get('onu_types', [])
-        if onu_types is not None:
+        onu_types = result.get('onu_types')
+        if onu_types:
             ONUType.query.filter_by(olt_id=olt.id).delete()
             for ot in onu_types:
                 otype = ONUType(olt_id=olt.id, type_name=ot['type_name'],
@@ -165,8 +165,8 @@ def save_sync_result(olt, result, sync, light=False):
                                 max_veip=ot.get('max_veip', 0))
                 db.session.add(otype)
 
-        speed_profiles = result.get('speed_profiles', {})
-        if speed_profiles:
+        speed_profiles = result.get('speed_profiles')
+        if speed_profiles and (speed_profiles.get('tcont') or speed_profiles.get('traffic')):
             SpeedProfile.query.filter_by(olt_id=olt.id).delete()
             for sp in speed_profiles.get('tcont', []):
                 profile = SpeedProfile(olt_id=olt.id, profile_type='tcont',
@@ -182,8 +182,8 @@ def save_sync_result(olt, result, sync, light=False):
                                        pir=sp.get('pir', '0'))
                 db.session.add(profile)
 
-        wan_profiles = result.get('wan_ip_profiles', [])
-        if wan_profiles is not None:
+        wan_profiles = result.get('wan_ip_profiles')
+        if wan_profiles:
             WanIpProfile.query.filter_by(olt_id=olt.id).delete()
             for wp in wan_profiles:
                 profile = WanIpProfile(olt_id=olt.id, name=wp['name'],
@@ -194,8 +194,8 @@ def save_sync_result(olt, result, sync, light=False):
                                        dns2=wp.get('dns2', ''))
                 db.session.add(profile)
 
-        uplinks = result.get('uplinks', [])
-        if uplinks is not None:
+        uplinks = result.get('uplinks')
+        if uplinks:
             # Save IP network config before deleting (sync overwrites uplinks but IP config is user-set)
             old_uplinks = OLTUplink.query.filter_by(olt_id=olt.id).all()
             ip_config_by_port = {}
