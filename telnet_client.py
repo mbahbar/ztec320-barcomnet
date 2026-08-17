@@ -1806,7 +1806,7 @@ class TelnetCollector:
                     acs_url = extra.get('acs_url') or 'http://10.0.0.2:7547'
                     acs_user = extra.get('acs_user') or 'admin'
                     acs_pass = extra.get('acs_pass') or 'acsadmin'
-                    tr069_vlan = extra.get('tr069_vlan') or '1005'
+                    tr069_vlan = extra.get('tr069_vlan') or '20'
                     sc('tr069-mgmt 1 state unlock')
                     sc(f'tr069-mgmt 1 acs {acs_url} validate basic username {acs_user} password {acs_pass}')
                     if tr069_vlan:
