@@ -255,6 +255,15 @@ class TelnetCollector:
             info['cards'] = self._parse_show_card(output)
             fan_output = self._send_command(tn, 'show fan')
             info['fans'] = self._parse_show_fan(fan_output)
+            proc_output = self._send_command(tn, 'show processor')
+            proc_map = self._parse_show_processor(proc_output)
+            for cd in info['cards']:
+                slot = cd.get('slot')
+                if slot in proc_map:
+                    cd['cpu_usage'] = proc_map[slot]['cpu_usage']
+                    cd['memory_usage'] = proc_map[slot]['memory_usage']
+                    cd['memory_total'] = proc_map[slot]['memory_total']
+
             temp_match = re.search(r'Environment Temperature\s*:\s*(\d+)', fan_output)
             if temp_match: info['temperature'] = int(temp_match.group(1))
             if not info['temperature']:
@@ -5993,6 +6002,31 @@ class TelnetCollector:
                                   'status': status, 'port_count': port_count})
                 except (ValueError, IndexError): continue
         return cards
+
+    def _parse_show_processor(self, output):
+        procs = {}
+        if not output or '%Error' in output or 'Unrecognized' in output:
+            return procs
+        for line in output.split('\n'):
+            line = line.strip()
+            if not line or line.startswith('-') or line.startswith('Rack') or line.startswith('Slot'):
+                continue
+            parts = line.split()
+            if len(parts) >= 7:
+                try:
+                    slot = int(parts[2])
+                    cpu_5s = int(parts[3].replace('%', ''))
+                    phymem = int(parts[6])
+                    mem_usage = int(parts[7].replace('%', ''))
+                    procs[slot] = {
+                        'slot': slot,
+                        'cpu_usage': cpu_5s,
+                        'memory_usage': mem_usage,
+                        'memory_total': phymem
+                    }
+                except (ValueError, IndexError):
+                    continue
+        return procs
 
     def _parse_show_fan(self, output):
         fans = []

@@ -53,7 +53,10 @@ def save_sync_result(olt, result, sync, light=False):
             for cd in chassis['cards']:
                 card = OLTCard(olt_id=olt.id, slot=cd.get('slot', 0),
                                card_type=cd.get('type', ''), status=cd.get('status', ''),
-                               total_ports=cd.get('port_count', 0))
+                               total_ports=cd.get('port_count', 0),
+                               cpu_usage=cd.get('cpu_usage', 0),
+                               memory_usage=cd.get('memory_usage', 0),
+                               memory_total=cd.get('memory_total', 0))
                 db.session.add(card)
 
         pon_ports_data = result.get('pon_ports', [])

@@ -1733,11 +1733,33 @@ function SystemTab({ olt }: { olt: Record<string, unknown> }) {
           </div>
         </div>
         <div className="rounded-xl bg-glass p-3 md:p-4">
-          <h6 className="text-xs font-semibold text-tx3 uppercase mb-3">Chassis</h6>
+          <h6 className="text-xs font-semibold text-tx3 uppercase mb-3">Chassis & Performance</h6>
           <div className="space-y-2 text-xs md:text-sm">
-            {([['Temperature', olt.temperature ? `${olt.temperature}°C` : 'N/A'], ['Uptime', formatUptime(olt.uptime)], ['Polling Interval', `${olt.polling_interval || 300}s`], ['Total Fans', olt.total_fan || 0], ['Total Cards', cards.length], ['Last Sync', olt.last_sync ? new Date(String(olt.last_sync)).toLocaleString() : 'Never']] as [string, unknown][]).map(([k, v]) => (
-              <div key={k} className="flex justify-between"><span className="text-tx3">{k}</span><strong>{String(v)}</strong></div>
-            ))}
+            {(() => {
+              const mainCard = cards.find(c => String(c.card_type || '').toUpperCase().includes('SMXA')) || cards[0];
+              const cpuVal = mainCard ? (Number(mainCard.cpu_usage) || 0) : 0;
+              const memVal = mainCard ? (Number(mainCard.memory_usage) || 0) : 0;
+              const memTot = mainCard ? (Number(mainCard.memory_total) || 0) : 0;
+              return (
+                <>
+                  {([['Temperature', olt.temperature ? `${olt.temperature}°C` : 'N/A'], ['Uptime', formatUptime(olt.uptime)], ['Polling Interval', `${olt.polling_interval || 300}s`], ['Total Fans', olt.total_fan || 0], ['Total Cards', cards.length]] as [string, unknown][]).map(([k, v]) => (
+                    <div key={k} className="flex justify-between"><span className="text-tx3">{k}</span><strong>{String(v)}</strong></div>
+                  ))}
+                  <div className="flex justify-between items-center pt-1 border-t border-brd/40">
+                    <span className="text-tx3">CPU Usage (Main)</span>
+                    <span className={cn('px-2 py-0.5 rounded-md text-xs font-bold', cpuVal >= 80 ? 'bg-danger/15 text-danger' : cpuVal >= 60 ? 'bg-amber-500/15 text-amber-500' : 'bg-success/15 text-success')}>
+                      {cpuVal > 0 ? `${cpuVal}%` : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-tx3">RAM Usage (Main)</span>
+                    <span className={cn('px-2 py-0.5 rounded-md text-xs font-bold', memVal >= 80 ? 'bg-danger/15 text-danger' : memVal >= 60 ? 'bg-amber-500/15 text-amber-500' : 'bg-accent/15 text-accent')}>
+                      {memVal > 0 ? `${memVal}% ${memTot ? `(${memTot} MB)` : ''}` : 'N/A'}
+                    </span>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -1794,36 +1816,63 @@ function SystemTab({ olt }: { olt: Record<string, unknown> }) {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-brd text-tx3 text-xs uppercase">
-                <th className="text-left py-2 px-3">Slot</th><th className="text-left py-2 px-3">Card Type</th><th className="text-left py-2 px-3">Status</th><th className="text-left py-2 px-3">Ports</th><th className="text-left py-2 px-3">Ports Up</th><th className="text-left py-2 px-3">Ports Down</th>
+                <th className="text-left py-2 px-3">Slot</th><th className="text-left py-2 px-3">Card Type</th><th className="text-left py-2 px-3">Status</th><th className="text-left py-2 px-3">CPU Usage</th><th className="text-left py-2 px-3">RAM Usage</th><th className="text-left py-2 px-3">Ports</th><th className="text-left py-2 px-3">Ports Up</th><th className="text-left py-2 px-3">Ports Down</th>
               </tr></thead>
               <tbody>
-                {cards.map((c: Record<string, unknown>, i: number) => (
-                  <tr key={i} className="border-b border-brd/50">
-                    <td className="py-2 px-3 font-bold">{String(c.slot)}</td>
-                    <td className="py-2 px-3">{String(c.card_type)}</td>
-                    <td className="py-2 px-3"><span className={cn('px-2 py-0.5 rounded-full text-xs', String(c.status || '').toUpperCase() === 'INSERVICE' ? 'bg-success/15 text-success' : 'bg-offline/15 text-tx3')}>{String(c.status || '-')}</span></td>
-                    <td className="py-2 px-3">{String(c.total_ports || '-')}</td>
-                    <td className="py-2 px-3 text-success">{String(c.ports_up || '0')}</td>
-                    <td className="py-2 px-3 text-danger">{String(c.ports_down || '0')}</td>
-                  </tr>
-                ))}
+                {cards.map((c: Record<string, unknown>, i: number) => {
+                  const cpu = Number(c.cpu_usage || 0);
+                  const mem = Number(c.memory_usage || 0);
+                  const memTot = Number(c.memory_total || 0);
+                  return (
+                    <tr key={i} className="border-b border-brd/50">
+                      <td className="py-2 px-3 font-bold">{String(c.slot)}</td>
+                      <td className="py-2 px-3">{String(c.card_type)}</td>
+                      <td className="py-2 px-3"><span className={cn('px-2 py-0.5 rounded-full text-xs', String(c.status || '').toUpperCase() === 'INSERVICE' ? 'bg-success/15 text-success' : 'bg-offline/15 text-tx3')}>{String(c.status || '-')}</span></td>
+                      <td className="py-2 px-3 font-medium">
+                        {cpu > 0 ? (
+                          <span className={cn('px-1.5 py-0.5 rounded text-xs', cpu >= 80 ? 'bg-danger/15 text-danger' : cpu >= 60 ? 'bg-amber-500/15 text-amber-500' : 'text-success')}>
+                            {cpu}%
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td className="py-2 px-3 font-medium">
+                        {mem > 0 ? (
+                          <span className={cn('px-1.5 py-0.5 rounded text-xs', mem >= 80 ? 'bg-danger/15 text-danger' : mem >= 60 ? 'bg-amber-500/15 text-amber-500' : 'text-accent')}>
+                            {mem}% {memTot ? `(${memTot}MB)` : ''}
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td className="py-2 px-3">{String(c.total_ports || '-')}</td>
+                      <td className="py-2 px-3 text-success">{String(c.ports_up || '0')}</td>
+                      <td className="py-2 px-3 text-danger">{String(c.ports_down || '0')}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
           {/* Mobile Cards */}
           <div className="md:hidden space-y-2">
-            {cards.map((c: Record<string, unknown>, i: number) => (
-              <div key={i} className="p-2.5 rounded-lg bg-glass/50 border border-brd flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm">Slot {String(c.slot)}</span>
-                  <span className="text-xs text-tx3">{String(c.card_type)}</span>
+            {cards.map((c: Record<string, unknown>, i: number) => {
+              const cpu = Number(c.cpu_usage || 0);
+              const mem = Number(c.memory_usage || 0);
+              return (
+                <div key={i} className="p-2.5 rounded-lg bg-glass/50 border border-brd space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm">Slot {String(c.slot)}</span>
+                      <span className="text-xs text-tx3">{String(c.card_type)}</span>
+                    </div>
+                    <span className={cn('px-1.5 py-0.5 rounded-full text-[10px]', String(c.status || '').toUpperCase() === 'INSERVICE' ? 'bg-success/15 text-success' : 'bg-offline/15 text-tx3')}>{String(c.status || '-')}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-tx3 pt-1 border-t border-brd/30">
+                    <span>CPU: <strong className={cn(cpu >= 80 ? 'text-danger' : cpu >= 60 ? 'text-amber-500' : 'text-success')}>{cpu > 0 ? `${cpu}%` : '-'}</strong></span>
+                    <span>RAM: <strong className={cn(mem >= 80 ? 'text-danger' : mem >= 60 ? 'text-amber-500' : 'text-accent')}>{mem > 0 ? `${mem}%` : '-'}</strong></span>
+                    <span>Ports: <strong className="text-tx1">{String(c.ports_up || '0')}↑ / {String(c.ports_down || '0')}↓</strong></span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={cn('px-1.5 py-0.5 rounded-full text-[10px]', String(c.status || '').toUpperCase() === 'INSERVICE' ? 'bg-success/15 text-success' : 'bg-offline/15 text-tx3')}>{String(c.status || '-')}</span>
-                  <span className="text-[10px] text-tx3">{String(c.ports_up || '0')}↑ / {String(c.ports_down || '0')}↓</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           </>
         ) : <div className="text-center py-6 text-tx3 text-xs">No card data available. Run Sync.</div>}

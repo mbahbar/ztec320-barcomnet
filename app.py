@@ -177,7 +177,7 @@ def api_dashboard():
         'fans': [{'number': f.fan_number, 'status': f.status, 'rpm': f.rpm, 'speed_level': f.speed_level} for f in Fan.query.filter_by(olt_id=o.id).all()],
         'ip': o.ip_address,
         'vendor': o.vendor or 'zte',
-        'cards': [{'slot': c.slot, 'card_type': c.card_type, 'status': c.status, 'total_ports': c.total_ports, 'ports_up': c.ports_up, 'ports_down': c.ports_down} for c in OLTCard.query.filter_by(olt_id=o.id).all()],
+        'cards': [{'slot': c.slot, 'card_type': c.card_type, 'status': c.status, 'total_ports': c.total_ports, 'ports_up': c.ports_up, 'ports_down': c.ports_down, 'cpu_usage': c.cpu_usage or 0, 'memory_usage': c.memory_usage or 0, 'memory_total': c.memory_total or 0} for c in OLTCard.query.filter_by(olt_id=o.id).all()],
         'uplink_count': OLTUplink.query.filter_by(olt_id=o.id).count(),
         'uptime': o.uptime or 0,
         'snmp_status': o.snmp_status or 'disconnected',
