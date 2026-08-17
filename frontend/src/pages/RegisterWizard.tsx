@@ -123,8 +123,8 @@ function generateRegisterScript(d: WizardData): string {
     lines.push('  security-mgmt 1 state enable mode forward protocol web ftp telnet ssh https snmp tr069');
   } else if (d.template === 'zte_full') {
     const vlans = Array.isArray(e.vlans) && e.vlans.length > 0 ? e.vlans : [
-      { vlan: e.primary_vlan || '30', label: 'Internet' },
-      { vlan: e.secondary_vlan || '151', label: 'Voucher' },
+      { vlan: e.primary_vlan || '1006', label: 'Internet' },
+      { vlan: e.secondary_vlan || '1005', label: 'TR069' },
     ];
     vlans.forEach((v, i) => {
       const n = i + 1;
@@ -152,7 +152,7 @@ function generateRegisterScript(d: WizardData): string {
       lines.push('  vlan port veip_1 mode hybrid');
       lines.push('  vlan port veip_1 vlan 1');
     }
-    const pv = String(vlans[0]?.vlan || '30');
+    const pv = String(vlans[0]?.vlan || '1006');
     const enableTr069 = e.enable_tr069 === 'true';
     if (enableTr069) lines.push('  wan 1 service tr069 internet host 1');
     else lines.push('  wan 1 service internet host 1');
@@ -1062,16 +1062,16 @@ export function RegisterWizard() {
                 </div>
                 <div className="space-y-2">
                   {(Array.isArray(data.extra.vlans) && data.extra.vlans.length > 0 ? data.extra.vlans : [
-                    { vlan: data.extra.primary_vlan || '30', label: 'Internet' },
-                    { vlan: data.extra.secondary_vlan || '151', label: 'Voucher' },
+                    { vlan: data.extra.primary_vlan || '1006', label: 'Internet' },
+                    { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
                   ]).map((v, i) => (
                     <div key={i} className="flex gap-2 items-center">
                       <span className="text-[10px] text-tx3 w-6 flex-shrink-0">#{i + 1}</span>
                       {vlanList.length > 0 ? (
                         <select value={v.vlan || ''} onChange={e => {
                           const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                            { vlan: data.extra.primary_vlan || '30', label: 'Internet' },
-                            { vlan: data.extra.secondary_vlan || '151', label: 'Voucher' },
+                            { vlan: data.extra.primary_vlan || '1006', label: 'Internet' },
+                            { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
                           ];
                           cur[i] = { ...cur[i], vlan: e.target.value };
                           update('extra', { ...data.extra, vlans: cur });
@@ -1083,8 +1083,8 @@ export function RegisterWizard() {
                         <input type="number" value={v.vlan || ''} placeholder="VLAN ID"
                           onChange={e => {
                             const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                              { vlan: data.extra.primary_vlan || '30', label: 'Internet' },
-                              { vlan: data.extra.secondary_vlan || '151', label: 'Voucher' },
+                              { vlan: data.extra.primary_vlan || '1006', label: 'Internet' },
+                              { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
                             ];
                             cur[i] = { ...cur[i], vlan: e.target.value };
                             update('extra', { ...data.extra, vlans: cur });
@@ -1094,8 +1094,8 @@ export function RegisterWizard() {
                       <input type="text" value={v.label || ''} placeholder="Label (opt)"
                         onChange={e => {
                           const cur = Array.isArray(data.extra.vlans) ? [...data.extra.vlans] : [
-                            { vlan: data.extra.primary_vlan || '30', label: 'Internet' },
-                            { vlan: data.extra.secondary_vlan || '151', label: 'Voucher' },
+                            { vlan: data.extra.primary_vlan || '1006', label: 'Internet' },
+                            { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
                           ];
                           cur[i] = { ...cur[i], label: e.target.value };
                           update('extra', { ...data.extra, vlans: cur });
@@ -2202,8 +2202,8 @@ export function RegisterWizard() {
                   <ConfigRow label="VEIP Mode" value={data.extra.use_veip === 'true' ? 'Enabled (non-ZTE ONU)' : 'Disabled (ZTE ONU)'} />
                   {(() => {
                     const vlans = Array.isArray(data.extra.vlans) && data.extra.vlans.length > 0 ? data.extra.vlans : [
-                      { vlan: data.extra.primary_vlan || '30', label: 'Internet' },
-                      { vlan: data.extra.secondary_vlan || '151', label: 'Voucher' },
+                      { vlan: data.extra.primary_vlan || '1006', label: 'Internet' },
+                      { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
                     ];
                     return vlans.map((v, i) => (
                       <ConfigRow key={i} label={`VLAN #${i + 1}${v.label ? ` (${v.label})` : ''}`} value={String(v.vlan || '-')} />

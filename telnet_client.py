@@ -1508,8 +1508,18 @@ class TelnetCollector:
                         sc(f'tr069-mgmt 1 tag pri 0 vlan {tr069_vlan}')
 
             elif template == 'zte_full':
-                primary_vlan = int(extra.get('primary_vlan') or 30)
-                secondary_vlan = int(extra.get('secondary_vlan') or 151)
+                vlans_raw = extra.get('vlans', [])
+                if vlans_raw and len(vlans_raw) > 0:
+                    v0 = vlans_raw[0].get('vlan') if isinstance(vlans_raw[0], dict) else vlans_raw[0]
+                    primary_vlan = int(v0 or extra.get('primary_vlan') or vlan or 1006)
+                    if len(vlans_raw) > 1:
+                        v1 = vlans_raw[1].get('vlan') if isinstance(vlans_raw[1], dict) else vlans_raw[1]
+                        secondary_vlan = int(v1 or extra.get('secondary_vlan') or 1005)
+                    else:
+                        secondary_vlan = int(extra.get('secondary_vlan') or 1005)
+                else:
+                    primary_vlan = int(extra.get('primary_vlan') or vlan or 1006)
+                    secondary_vlan = int(extra.get('secondary_vlan') or 1005)
                 enable_dual_ssid = extra.get('enable_dual_ssid', 'true') == 'true'
                 ssid1_name = extra.get('ssid1_name', '')
                 ssid1_pass = extra.get('ssid1_pass', '12345678')
@@ -1521,9 +1531,9 @@ class TelnetCollector:
                 pppoe_user = extra.get('pppoe_user', '')
                 pppoe_pass = extra.get('pppoe_pass', '')
                 enable_tr069 = extra.get('enable_tr069', '') == 'true'
-                acs_url = extra.get('acs_url', '') or 'http://192.168.54.254:7547'
-                acs_user = extra.get('acs_user', '') or 'acs'
-                acs_pass = extra.get('acs_pass', '') or 'acs'
+                acs_url = extra.get('acs_url', '') or 'http://10.0.0.2:7547'
+                acs_user = extra.get('acs_user', '') or 'admin'
+                acs_pass = extra.get('acs_pass', '') or 'admin'
                 tr069_vlan = int(extra.get('tr069_vlan') or 0)
                 enable_firewall = extra.get('enable_firewall', '') == 'true'
                 firewall_level = extra.get('firewall_level', 'low')
