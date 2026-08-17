@@ -424,10 +424,11 @@ def save_sync_result(olt, result, sync, light=False):
             pp.onu_online = sum(1 for o in port_onus if o.status == 'online')
             pp.onu_offline = sum(1 for o in port_onus if o.status != 'online')
 
-    sync.progress = 95
-    sync.status = 'saving'
-    sync.message = f'Saving {len(onus_data)} ONUs...'
-    sync.onu_count = len(onus_data)
+    if sync:
+        sync.progress = 95
+        sync.status = 'saving'
+        sync.message = f'Saving {len(onus_data)} ONUs...'
+        sync.onu_count = len(onus_data)
     db.session.commit()
 
     # Invalidate dashboard cache so frontend sees fresh data
