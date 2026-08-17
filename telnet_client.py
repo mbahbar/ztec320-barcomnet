@@ -1556,13 +1556,15 @@ class TelnetCollector:
 
                 # pon-onu-mng config
                 self._send_command(tn, f'pon-onu-mng {onu_if}')
-                # Safe-replace: delete old service entries to prevent error 63869
-                for n in [1, 2]:
-                    self._send_command(tn, f'no service VLAN{n:04d}', timeout=10)
-                    self._send_command(tn, f'no service service{n}', timeout=10)
-                    self._send_command(tn, f'no wan {n} service', timeout=10)
-                    self._send_command(tn, f'no wan-ip {n}', timeout=10)
-                    self._send_command(tn, f'no pppoe {n}', timeout=10)
+                # Safe-replace: delete old & factory service entries (e.g. VoIP_TR069, TR069 with default VLAN 100)
+                for svc in ['VoIP_TR069', 'TR069', 'TR069_VOIP', 'INTERNET', 'OTHER', 'VOIP', 'IPTV', 'TR069_INTERNET', 'TR069_OTHER']:
+                    self._send_command(tn, f'no service {svc}', timeout=5)
+                for n in [1, 2, 3, 4]:
+                    self._send_command(tn, f'no service VLAN{n:04d}', timeout=5)
+                    self._send_command(tn, f'no service service{n}', timeout=5)
+                    self._send_command(tn, f'no wan {n} service', timeout=5)
+                    self._send_command(tn, f'no wan-ip {n}', timeout=5)
+                    self._send_command(tn, f'no pppoe {n}', timeout=5)
                 import time as _t; _t.sleep(1)
                 service1_name = f'VLAN{primary_vlan:04d}'
                 use_veip = extra.get('use_veip', '') == 'true'
@@ -1658,14 +1660,13 @@ class TelnetCollector:
                     sc(f'service-port 2 description TR069-Mgmt')
                 self._send_command(tn, 'exit')
                 self._send_command(tn, f'pon-onu-mng {onu_if}')
-                # Safe-replace: delete old service entries to prevent error 63869
-                self._send_command(tn, 'no service INTERNET', timeout=10)
-                self._send_command(tn, 'no service service1', timeout=10)
-                self._send_command(tn, 'no service service2', timeout=10)
-                self._send_command(tn, 'no service TR069', timeout=10)
-                self._send_command(tn, 'no wan 1 service', timeout=10)
-                self._send_command(tn, 'no wan-ip 1', timeout=10)
-                self._send_command(tn, 'no pppoe 1', timeout=10)
+                # Safe-replace: delete old & factory service entries
+                for svc in ['VoIP_TR069', 'TR069', 'TR069_VOIP', 'INTERNET', 'OTHER', 'VOIP', 'IPTV', 'service1', 'service2']:
+                    self._send_command(tn, f'no service {svc}', timeout=5)
+                for n in [1, 2]:
+                    self._send_command(tn, f'no wan {n} service', timeout=5)
+                    self._send_command(tn, f'no wan-ip {n}', timeout=5)
+                    self._send_command(tn, f'no pppoe {n}', timeout=5)
                 import time as _t; _t.sleep(1)
                 use_veip = extra.get('use_veip', '') == 'true'
                 if use_veip:
