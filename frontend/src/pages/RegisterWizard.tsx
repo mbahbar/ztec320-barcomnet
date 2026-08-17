@@ -580,7 +580,23 @@ export function RegisterWizard() {
       const onuTypeToSend = isEpon && data.onuType === 'All' ? 'ALL-EPON' : data.onuType;
 
       try {
-        const extraToSend = data.extra;
+        const extraToSend: Record<string, unknown> = { ...data.extra };
+        if (data.template === 'zte_full') {
+          const defaultZteVlans = [
+            { vlan: data.extra.primary_vlan || '1006', label: 'Internet' },
+            { vlan: data.extra.secondary_vlan || '1005', label: 'TR069' },
+          ];
+          extraToSend.vlans = Array.isArray(data.extra.vlans) && data.extra.vlans.length > 0 ? data.extra.vlans : defaultZteVlans;
+          const vArr = extraToSend.vlans as { vlan?: string; label?: string }[];
+          extraToSend.primary_vlan = vArr[0]?.vlan || '1006';
+          extraToSend.secondary_vlan = vArr[1]?.vlan || '1005';
+        } else if (data.template === 'huawei_full' || data.template === 'nokia_full' || data.template === 'fiberhome_veip') {
+          const defaultVlans = [
+            { vlan: data.extra.mgmt_vlan || data.extra.tr069_vlan || '1005', label: 'Mgmt' },
+            { vlan: data.extra.internet_vlan || '1006', label: 'Internet' },
+          ];
+          extraToSend.vlans = Array.isArray(data.extra.vlans) && data.extra.vlans.length > 0 ? data.extra.vlans : defaultVlans;
+        }
         const r = await fetch('/api/pre-register', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
           body: JSON.stringify({

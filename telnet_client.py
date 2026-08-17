@@ -1511,14 +1511,14 @@ class TelnetCollector:
                 vlans_raw = extra.get('vlans', [])
                 if vlans_raw and len(vlans_raw) > 0:
                     v0 = vlans_raw[0].get('vlan') if isinstance(vlans_raw[0], dict) else vlans_raw[0]
-                    primary_vlan = int(v0 or extra.get('primary_vlan') or vlan or 1006)
+                    primary_vlan = int(v0 or extra.get('primary_vlan') or 1006)
                     if len(vlans_raw) > 1:
                         v1 = vlans_raw[1].get('vlan') if isinstance(vlans_raw[1], dict) else vlans_raw[1]
                         secondary_vlan = int(v1 or extra.get('secondary_vlan') or 1005)
                     else:
                         secondary_vlan = int(extra.get('secondary_vlan') or 1005)
                 else:
-                    primary_vlan = int(extra.get('primary_vlan') or vlan or 1006)
+                    primary_vlan = int(extra.get('primary_vlan') or 1006)
                     secondary_vlan = int(extra.get('secondary_vlan') or 1005)
                 enable_dual_ssid = extra.get('enable_dual_ssid', 'true') == 'true'
                 ssid1_name = extra.get('ssid1_name', '')
