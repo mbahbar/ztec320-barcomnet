@@ -1576,9 +1576,11 @@ class TelnetCollector:
                     sc('vlan port veip_1 mode hybrid')
                     sc('vlan port veip_1 vlan 1')
 
-                # PPPoE first (creates WAN connection)
+                # PPPoE or DHCP mode (creates WAN connection)
                 if enable_pppoe and pppoe_user and pppoe_pass:
                     sc(f'pppoe 1 nat enable user {pppoe_user} password {pppoe_pass}')
+                elif not use_veip:
+                    sc('ip-host 1 dhcp-enable enable ping-response enable traceroute-response enable')
 
                 # WAN service AFTER pppoe so service type is not overridden
                 # Include tr069 in service type when TR069 is enabled so GenieACS can connect
@@ -1673,9 +1675,11 @@ class TelnetCollector:
                 if enable_tr069 and tr069_vlan and int(tr069_vlan) != int(vlan):
                     sc(f'service TR069 gemport 2 vlan {tr069_vlan}')
 
-                # PPPoE first (creates WAN connection)
+                # PPPoE or DHCP mode (creates WAN connection)
                 if enable_pppoe and pppoe_user and pppoe_pass:
                     sc(f'pppoe 1 nat enable user {pppoe_user} password {pppoe_pass}')
+                elif not use_veip:
+                    sc('ip-host 1 dhcp-enable enable ping-response enable traceroute-response enable')
 
                 # WAN service AFTER pppoe so service type is not overridden
                 # Include tr069 in service type when TR069 is enabled so GenieACS can connect
