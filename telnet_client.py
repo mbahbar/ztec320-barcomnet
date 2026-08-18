@@ -1813,7 +1813,7 @@ class TelnetCollector:
                 if extra.get('enable_tr069') == 'true' or extra.get('acs_url'):
                     acs_url = extra.get('acs_url') or 'http://10.0.0.2:7547'
                     acs_user = extra.get('acs_user') or 'admin'
-                    acs_pass = extra.get('acs_pass') or 'admin'
+                    acs_pass = extra.get('acs_pass') or 'acsadmin'
                     tr069_vlan = extra.get('tr069_vlan') or ''
                     if not tr069_vlan:
                         for v in vlans_raw:
