@@ -1809,12 +1809,7 @@ class TelnetCollector:
                     sc(f'vlan port eth_0/{eth_port} mode tag vlan {internet_vlan}')
                 sc_warn(f'vlan port wifi_0/1 mode tag vlan {internet_vlan}')
                 sc_warn(f'vlan port wifi_0/5 mode tag vlan {internet_vlan}')
-                pppoe_user = extra.get('pppoe_user', '')
-                pppoe_pass = extra.get('pppoe_pass', '')
-                vlan_profile = extra.get('vlan_profile', f'PPPoE-{internet_vlan}')
-                if extra.get('enable_pppoe') == 'true' and pppoe_user:
-                    sc(f'wan-ip 1 mode pppoe username {pppoe_user} password {pppoe_pass} vlan-profile {vlan_profile} host 1')
-                    sc('security-mgmt 1 state enable mode forward')
+                sc('security-mgmt 1 state enable mode forward')
                 if extra.get('enable_tr069') == 'true' or extra.get('acs_url'):
                     acs_url = extra.get('acs_url') or 'http://10.0.0.2:7547'
                     acs_user = extra.get('acs_user') or 'admin'
